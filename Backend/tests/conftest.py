@@ -1,3 +1,5 @@
+from passlib.context import CryptContext
+from app import models
 import os
 
 import pytest
@@ -15,6 +17,17 @@ TestingSessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)
+
+# Create test user
+db = TestingSessionLocal()
+
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+hashed_password = pwd_context.hash("testpass")
+test_user = models.User(
+    username="testuser", email="test@example.com", hashed_password=hashed_password)
+db.add(test_user)
+db.commit()
+db.close()
 
 
 def override_get_db():

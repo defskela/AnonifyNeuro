@@ -36,7 +36,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(database.get_db)):
     try:
         payload = jwt.decode(credentials.credentials,
                              SECRET_KEY, algorithms=[ALGORITHM])
@@ -44,7 +44,12 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        return username
+        user = db.query(models.User).filter(
+            models.User.username == username).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        return user.id
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
