@@ -4,9 +4,9 @@ from app import models
 
 def test_register_success(test_app):
     response = test_app.post("/auth/register", json={
-        "username": "testuser",
+        "username": "newuser",
         "password": "testpass",
-        "email": "test@example.com"
+        "email": "new@example.com"
     })
     assert response.status_code == 201
     data = response.json()
@@ -75,15 +75,10 @@ def test_login_invalid_credentials(test_app):
 
 
 def test_logout_success(test_app):
-    # Register and login
-    test_app.post("/auth/register", json={
-        "username": "logoutuser",
-        "password": "logoutpass",
-        "email": "logout@example.com"
-    })
+    # Login with testuser
     login_response = test_app.post("/auth/login", json={
-        "username": "logoutuser",
-        "password": "logoutpass"
+        "username": "testuser",
+        "password": "testpass"
     })
     token = login_response.json()["jwt_token"]
 
@@ -101,15 +96,10 @@ def test_logout_no_token(test_app):
 
 
 def test_refresh_success(test_app):
-    # Register and login
-    test_app.post("/auth/register", json={
-        "username": "refreshuser",
-        "password": "refreshpass",
-        "email": "refresh@example.com"
-    })
+    # Login with testuser
     login_response = test_app.post("/auth/login", json={
-        "username": "refreshuser",
-        "password": "refreshpass"
+        "username": "testuser",
+        "password": "testpass"
     })
     token = login_response.json()["jwt_token"]
 

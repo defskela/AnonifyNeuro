@@ -69,3 +69,9 @@ DATABASE_URL="sqlite:///./test.db" pytest tests/ -v
 -   `POST /auth/login` - Вход и получение JWT токена
 -   `POST /auth/logout` - Выход (требует токена)
 -   `POST /auth/refresh` - Обновление JWT токена (требует токена)
+
+### Обработка документов
+
+-   `POST /redact` - Загрузка документа и замазывание
+-   `GET /entities` - Список поддерживаемых типов PII
+-   `GET /logs/{taskId}` - Статус обработки задачи

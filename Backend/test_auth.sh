@@ -78,4 +78,15 @@ else
   echo "✗ Invalid credentials test failed"
 fi
 
+# Test 7: Get entities
+echo "Test 7: Get entities"
+ENTITIES_RESPONSE=$(curl -s -X GET http://localhost:8000/entities \
+  -H "Authorization: Bearer $TOKEN")
+echo "Entities response: $ENTITIES_RESPONSE"
+if echo "$ENTITIES_RESPONSE" | grep -q "entities"; then
+  echo "✓ Get entities test passed"
+else
+  echo "✗ Get entities test failed"
+fi
+
 echo "Regression tests completed!"
