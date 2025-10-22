@@ -103,3 +103,12 @@ def login(user: schemas.UserLogin, db: Session = Depends(database.get_db)):
 @router.post("/logout")
 def logout(current_user: str = Depends(get_current_user)):
     return {"message": "Logged out successfully"}
+
+
+@router.post("/refresh")
+def refresh(current_user: str = Depends(get_current_user)):
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    new_token = create_access_token(
+        data={"sub": current_user}, expires_delta=access_token_expires
+    )
+    return {"jwt_token": new_token}
