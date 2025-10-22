@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 
 from app import database, models, schemas
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+security = HTTPBearer()
 
 
 def verify_password(plain_password, hashed_password):
@@ -32,6 +34,20 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(credentials.credentials,
+                             SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        return username
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
 @router.post("/register", status_code=201)
@@ -85,5 +101,5 @@ def login(user: schemas.UserLogin, db: Session = Depends(database.get_db)):
 
 
 @router.post("/logout")
-def logout():
+def logout(current_user: str = Depends(get_current_user)):
     return {"message": "Logged out successfully"}
