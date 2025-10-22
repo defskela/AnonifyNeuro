@@ -1,0 +1,186 @@
+openapi: 3.1.0
+info:
+  title: Document PII Redaction API
+  version: 1.0.0
+  description: |
+    API для автоматизированного обнаружения и замазывания персональных данных (PII) в документах.
+paths:
+  /auth/register:
+    post:
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "newuser"
+                password:
+                  type: string
+                  format: password
+                  example: "strongpassword"
+                email:
+                  type: string
+                  format: email
+                  example: "test@example.com"
+      responses:
+        '201':
+          description: Успешная регистрация, пользователь создан
+        '400':
+          description: Некорректные данные или пользователь уже существует
+
+  /auth/login:
+    post:
+      summary: Войти и получить JWT токен
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Выдан JWT токен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: "bearer"
+        '401':
+          description: Неверные учётные данные
+
+  /auth/refresh:
+    post:
+      summary: Обновить JWT токен
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Новый access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: "bearer"
+        '401':
+          description: Некорректный или истёкший refresh token
+  /auth/logout:
+    post:
+      summary: Выйти из системы (аннулировать текущий токен)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Успешный выход (токен аннулирован)
+        '401':
+          description: Токен не предоставлен или неверный
+
+  /redact:
+    post:
+      summary: Замазать персональные данные в документе
+      description: Загружает документ и возвращает файл с замазанными личными данными.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Документ для обработки (PDF, PNG, JPG, JPEG)
+                types:
+                  type: array
+                  items:
+                    type: string
+                    enum: [name, email, phone, address, passport, ssn, credit_card]
+                  description: Список типов данных для замазывания (по умолчанию — все)
+      responses:
+        '200':
+          description: Успешно обработанный документ
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+                description: Файл с замазанными PII
+        '400':
+          description: Некорректный файл или параметры
+        '500':
+          description: Внутренняя ошибка сервера
+  /entities:
+    get:
+      summary: Получить список поддерживаемых сущностей для замазывания
+      responses:
+        '200':
+          description: Список типов PII
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entities:
+                    type: array
+                    items:
+                      type: string
+                      example: [name, email, phone, address, passport, ssn, credit_card]
+  /logs/{taskId}:
+    get:
+      summary: Получить лог обработки по ID задачи
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Лог статуса обработки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [pending, processing, success, error]
+                  details:
+                    type: string
+        '404':
+          description: Задача не найдена
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+security:
+  - ApiKeyAuth: []
