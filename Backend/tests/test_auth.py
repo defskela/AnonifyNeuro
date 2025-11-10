@@ -1,4 +1,5 @@
 import pytest
+
 from app import models
 
 
@@ -117,3 +118,73 @@ def test_refresh_invalid_token(test_app):
         "Authorization": "Bearer invalidtoken"
     })
     assert response.status_code == 401
+
+
+def test_update_profile_success(test_app):
+    register_response = test_app.post("/auth/register", json={
+        "username": "profileuser",
+        "password": "initialpass",
+        "email": "profile@example.com"
+    })
+    register_data = register_response.json()
+    token = register_data["jwt_token"]
+
+    update_response = test_app.put(
+        "/auth/profile",
+        json={"username": "profileuser_updated", "password": "newpass"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert update_response.status_code == 200
+    update_data = update_response.json()
+    assert update_data["message"] == "Profile updated successfully"
+    assert "jwt_token" in update_data
+
+    login_response = test_app.post("/auth/login", json={
+        "username": "profileuser_updated",
+        "password": "newpass"
+    })
+    assert login_response.status_code == 200
+    assert "jwt_token" in login_response.json()
+
+
+def test_update_profile_username_conflict(test_app):
+    response_user1 = test_app.post("/auth/register", json={
+        "username": "conflict_source",
+        "password": "pass1",
+        "email": "conflict1@example.com"
+    })
+    token_user1 = response_user1.json()["jwt_token"]
+
+    test_app.post("/auth/register", json={
+        "username": "conflict_target",
+        "password": "pass2",
+        "email": "conflict2@example.com"
+    })
+
+    update_response = test_app.put(
+        "/auth/profile",
+        json={"username": "conflict_target"},
+        headers={"Authorization": f"Bearer {token_user1}"}
+    )
+
+    assert update_response.status_code == 400
+    assert "Username already registered" in update_response.json()["detail"]
+
+
+def test_update_profile_no_fields(test_app):
+    register_response = test_app.post("/auth/register", json={
+        "username": "nofields",
+        "password": "nopass",
+        "email": "nofields@example.com"
+    })
+    token = register_response.json()["jwt_token"]
+
+    response = test_app.put(
+        "/auth/profile",
+        json={},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No fields to update"
