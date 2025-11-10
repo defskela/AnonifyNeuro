@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 
-from app import database, models, schemas
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+
+from app import database, models, schemas
 
 router = APIRouter()
 
@@ -111,9 +112,69 @@ def logout(current_user: str = Depends(get_current_user)):
 
 
 @router.post("/refresh")
-def refresh(current_user: str = Depends(get_current_user)):
+def refresh(
+    current_user_id: int = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    user = db.query(models.User).filter(
+        models.User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     new_token = create_access_token(
-        data={"sub": current_user}, expires_delta=access_token_expires
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"jwt_token": new_token}
+
+
+@router.put("/profile")
+def update_profile(
+    update_payload: schemas.UserUpdate,
+    current_user_id: int = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    if not update_payload.username and not update_payload.password:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    user = db.query(models.User).filter(
+        models.User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    issue_new_token = False
+
+    if update_payload.username:
+        new_username = update_payload.username.strip()
+        if not new_username:
+            raise HTTPException(status_code=400, detail="Invalid username")
+
+        if new_username != user.username:
+            existing_user = db.query(models.User).filter(
+                models.User.username == new_username
+            ).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=400, detail="Username already registered")
+
+            user.username = new_username
+            issue_new_token = True
+
+    if update_payload.password:
+        new_password = update_payload.password.strip()
+        if not new_password:
+            raise HTTPException(status_code=400, detail="Invalid password")
+        user.hashed_password = get_password_hash(new_password)
+        issue_new_token = True
+
+    db.commit()
+    db.refresh(user)
+
+    response = {"message": "Profile updated successfully"}
+    if issue_new_token:
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        response["jwt_token"] = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
+        )
+
+    return response
