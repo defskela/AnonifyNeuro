@@ -75,3 +75,10 @@ DATABASE_URL="sqlite:///./test.db" pytest tests/ -v
 -   `POST /redact` - Загрузка документа и замазывание
 -   `GET /entities` - Список поддерживаемых типов PII
 -   `GET /logs/{taskId}` - Статус обработки задачи
+
+### Чаты
+
+-   `GET /chats` - Список чатов пользователя
+-   `GET /chats/{chatId}/messages` - Сообщения выбранного чата
+-   `POST /chats` - Создание чата
+-   `POST /chats/{chatId}/messages` - Отправка сообщения в чат
