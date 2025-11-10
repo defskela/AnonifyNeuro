@@ -80,3 +80,5 @@ DATABASE_URL="sqlite:///./test.db" pytest tests/ -v
 
 -   `GET /chats` - Список чатов пользователя
 -   `GET /chats/{chatId}/messages` - Сообщения выбранного чата
+-   `POST /chats` - Создание чата
+-   `POST /chats/{chatId}/messages` - Отправка сообщения в чат

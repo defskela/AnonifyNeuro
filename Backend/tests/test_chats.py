@@ -44,3 +44,66 @@ def test_get_chat_messages_not_found_for_other_user(test_app):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Chat not found"
+
+
+def test_create_chat_success(test_app):
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    response = test_app.post(
+        "/chats",
+        json={"title": "New Project"},
+        headers=headers
+    )
+
+    assert response.status_code == 201
+    chat_data = response.json()
+    assert chat_data["title"] == "New Project"
+    assert "id" in chat_data
+
+
+def test_send_message_success(test_app):
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    chat_response = test_app.post("/chats", json={}, headers=headers)
+    chat_id = chat_response.json()["id"]
+
+    message_response = test_app.post(
+        f"/chats/{chat_id}/messages",
+        json={"content": "Here is the document"},
+        headers=headers
+    )
+
+    assert message_response.status_code == 201
+    message_data = message_response.json()
+    assert message_data["chat_id"] == chat_id
+    assert message_data["sender"] == "user"
+    assert message_data["content"] == "Here is the document"
+
+
+def test_send_message_requires_content_or_image(test_app):
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    chat_response = test_app.post("/chats", json={}, headers=headers)
+    chat_id = chat_response.json()["id"]
+
+    message_response = test_app.post(
+        f"/chats/{chat_id}/messages",
+        json={},
+        headers=headers
+    )
+
+    assert message_response.status_code == 422
+
+
+def test_send_message_not_found_for_other_user(test_app):
+    other_headers = _auth_headers(test_app, "otheruser", "otherpass")
+    other_chat_response = test_app.post(
+        "/chats", json={}, headers=other_headers)
+    other_chat_id = other_chat_response.json()["id"]
+
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    response = test_app.post(
+        f"/chats/{other_chat_id}/messages",
+        json={"content": "Should not work"},
+        headers=headers
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Chat not found"
