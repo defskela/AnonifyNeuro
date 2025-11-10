@@ -29,7 +29,37 @@ def _setup_test_db():
             email="test@example.com",
             hashed_password=pwd_context.hash("testpass")
         )
-        db.add(test_user)
+        other_user = models.User(
+            username="otheruser",
+            email="other@example.com",
+            hashed_password=pwd_context.hash("otherpass")
+        )
+        db.add_all([test_user, other_user])
+        db.flush()
+
+        primary_chat = models.Chat(user_id=test_user.id, title="Onboarding")
+        other_chat = models.Chat(user_id=other_user.id, title="Private")
+        db.add_all([primary_chat, other_chat])
+        db.flush()
+
+        db.add_all([
+            models.Message(
+                chat_id=primary_chat.id,
+                sender=models.MessageSender.user,
+                content="Начнем работу"
+            ),
+            models.Message(
+                chat_id=primary_chat.id,
+                sender=models.MessageSender.assistant,
+                content="Расскажите о документе"
+            ),
+            models.Message(
+                chat_id=other_chat.id,
+                sender=models.MessageSender.user,
+                content="Это приватный чат"
+            )
+        ])
+
         db.commit()
     finally:
         db.close()
