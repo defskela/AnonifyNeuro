@@ -19,7 +19,18 @@ export interface Message {
   created_at?: string;
 }
 
+export interface BoundingBox {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  confidence: number;
+}
+
 export interface RedactResponse {
   task_id: string;
   status: string;
+  detections_count: number;
+  detections: BoundingBox[];
+  redacted_image_base64?: string | null;
 }
