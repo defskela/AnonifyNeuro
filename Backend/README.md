@@ -38,7 +38,7 @@ alembic upgrade head
 ### 4. Запуск сервера
 
 ```bash
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API будет доступно на `http://localhost:8000`.

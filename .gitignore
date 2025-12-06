@@ -1,2 +1,3 @@
 .venv
 Backend/test.db
+Frontend/.vite
