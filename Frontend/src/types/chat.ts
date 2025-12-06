@@ -4,6 +4,12 @@ export interface ChatSummary {
   created_at?: string;
 }
 
+export interface ChatDetails {
+  id: number;
+  title: string;
+  created_at?: string;
+}
+
 export interface Message {
   id: number;
   chat_id: number;
@@ -11,4 +17,9 @@ export interface Message {
   content: string;
   image_url?: string | null;
   created_at?: string;
+}
+
+export interface RedactResponse {
+  task_id: string;
+  status: string;
 }

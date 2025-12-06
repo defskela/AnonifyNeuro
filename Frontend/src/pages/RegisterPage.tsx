@@ -57,7 +57,7 @@ export const RegisterPage: React.FC = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match");
+      setError("Пароли не совпадают");
       return;
     }
 
@@ -91,10 +91,10 @@ export const RegisterPage: React.FC = () => {
         </div>
         <div className="space-y-6">
           <h2 className="text-white text-4xl font-bold leading-tight">
-            Start Protecting<br />Your Data Today
+            Начните защищать<br />свои данные сегодня
           </h2>
           <p className="text-indigo-100 text-lg">
-            Join thousands of users who trust AnonifyNeuro to keep their sensitive information safe.
+            Присоединяйтесь к пользователям, которые доверяют AnonifyNeuro защиту своих данных.
           </p>
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-white">
@@ -103,7 +103,7 @@ export const RegisterPage: React.FC = () => {
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
-              <span>License plate detection & redaction</span>
+              <span>Распознавание и скрытие номеров</span>
             </div>
             <div className="flex items-center gap-3 text-white">
               <div className="bg-white/20 rounded-full p-2">
@@ -111,7 +111,7 @@ export const RegisterPage: React.FC = () => {
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
-              <span>Personal data protection</span>
+              <span>Защита персональных данных</span>
             </div>
             <div className="flex items-center gap-3 text-white">
               <div className="bg-white/20 rounded-full p-2">
@@ -119,12 +119,12 @@ export const RegisterPage: React.FC = () => {
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
-              <span>Fast & secure processing</span>
+              <span>Быстрая и безопасная обработка</span>
             </div>
           </div>
         </div>
         <div className="text-indigo-200 text-sm">
-          © 2025 AnonifyNeuro. All rights reserved.
+          © 2025 AnonifyNeuro. Все права защищены.
         </div>
       </div>
 
@@ -144,22 +144,22 @@ export const RegisterPage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900">
-                Create account
+                Создать аккаунт
               </h2>
               <p className="mt-2 text-gray-500">
-                Get started with your free account
+                Начните пользоваться бесплатно
               </p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <Input
-                label="Username"
+                label="Имя пользователя"
                 name="username"
                 type="text"
                 required
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Choose a username"
+                placeholder="Выберите имя пользователя"
                 icon={<UserIcon />}
               />
               <Input
@@ -169,27 +169,27 @@ export const RegisterPage: React.FC = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter your email"
+                placeholder="Введите email"
                 icon={<EmailIcon />}
               />
               <Input
-                label="Password"
+                label="Пароль"
                 name="password"
                 type="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Create a password"
+                placeholder="Придумайте пароль"
                 icon={<LockIcon />}
               />
               <Input
-                label="Confirm Password"
+                label="Подтверждение пароля"
                 name="confirmPassword"
                 type="password"
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="Confirm your password"
+                placeholder="Повторите пароль"
                 icon={<CheckIcon />}
               />
 
@@ -203,15 +203,15 @@ export const RegisterPage: React.FC = () => {
               )}
 
               <Button type="submit" variant="gradient" size="lg" isLoading={isLoading}>
-                Create Account
+                Зарегистрироваться
               </Button>
             </form>
 
             <div className="mt-8 text-center">
               <p className="text-gray-500">
-                Already have an account?{' '}
+                Уже есть аккаунт?{' '}
                 <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
-                  Sign in
+                  Войти
                 </Link>
               </p>
             </div>

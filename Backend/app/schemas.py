@@ -34,6 +34,10 @@ class ChatCreate(BaseModel):
     title: Optional[str] = None
 
 
+class ChatUpdate(BaseModel):
+    title: Optional[str] = None
+
+
 class MessageCreate(BaseModel):
     content: Optional[str] = None
     image_url: Optional[str] = None
