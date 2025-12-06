@@ -15,7 +15,11 @@ def create_chat(
     current_user_id: int = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    new_chat = models.Chat(user_id=current_user_id, title=chat_payload.title)
+    title = chat_payload.title
+    if not title:
+        count = db.query(models.Chat).filter(models.Chat.user_id == current_user_id).count()
+        title = f"New Chat {count + 1}"
+    new_chat = models.Chat(user_id=current_user_id, title=title)
     db.add(new_chat)
     db.commit()
     db.refresh(new_chat)
@@ -34,6 +38,57 @@ def list_chats(
         .all()
     )
     return chats
+
+
+@router.patch("/{chat_id}", response_model=schemas.ChatSummary)
+def update_chat(
+    chat_id: int,
+    chat_payload: schemas.ChatUpdate,
+    current_user_id: int = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    chat = (
+        db.query(models.Chat)
+        .filter(
+            models.Chat.id == chat_id,
+            models.Chat.user_id == current_user_id
+        )
+        .first()
+    )
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+    
+    if chat_payload.title is not None:
+        chat.title = chat_payload.title
+    
+    db.commit()
+    db.refresh(chat)
+    return chat
+
+
+@router.delete("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_chat(
+    chat_id: int,
+    current_user_id: int = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    chat = (
+        db.query(models.Chat)
+        .filter(
+            models.Chat.id == chat_id,
+            models.Chat.user_id == current_user_id
+        )
+        .first()
+    )
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+    
+    db.query(models.Message).filter(models.Message.chat_id == chat_id).delete()
+    db.delete(chat)
+    db.commit()
+    return None
 
 
 @router.get("/{chat_id}/messages", response_model=List[schemas.MessageRead])

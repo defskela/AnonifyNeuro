@@ -67,28 +67,28 @@ export const LoginPage: React.FC = () => {
         </div>
         <div className="space-y-6">
           <h2 className="text-white text-4xl font-bold leading-tight">
-            Protect Your Privacy<br />with AI-Powered<br />Data Redaction
+            Защитите свои данные<br />с помощью ИИ<br />для анонимизации
           </h2>
           <p className="text-indigo-100 text-lg">
-            Automatically detect and hide sensitive information from your documents and images.
+            Автоматическое обнаружение и скрытие конфиденциальной информации на изображениях.
           </p>
           <div className="flex gap-4">
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 flex-1">
               <div className="text-white text-2xl font-bold">100%</div>
-              <div className="text-indigo-100 text-sm">Secure Processing</div>
+              <div className="text-indigo-100 text-sm">Безопасность</div>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 flex-1">
-              <div className="text-white text-2xl font-bold">AI</div>
-              <div className="text-indigo-100 text-sm">Powered Detection</div>
+              <div className="text-white text-2xl font-bold">ИИ</div>
+              <div className="text-indigo-100 text-sm">Распознавание</div>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 flex-1">
-              <div className="text-white text-2xl font-bold">Fast</div>
-              <div className="text-indigo-100 text-sm">Results</div>
+              <div className="text-white text-2xl font-bold">Быстро</div>
+              <div className="text-indigo-100 text-sm">Результат</div>
             </div>
           </div>
         </div>
         <div className="text-indigo-200 text-sm">
-          © 2025 AnonifyNeuro. All rights reserved.
+          © 2025 AnonifyNeuro. Все права защищены.
         </div>
       </div>
 
@@ -108,32 +108,32 @@ export const LoginPage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900">
-                Welcome back
+                С возвращением
               </h2>
               <p className="mt-2 text-gray-500">
-                Sign in to continue to your account
+                Войдите в свой аккаунт
               </p>
             </div>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               <Input
-                label="Username"
+                label="Имя пользователя"
                 name="username"
                 type="text"
                 required
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Enter your username"
+                placeholder="Введите имя пользователя"
                 icon={<UserIcon />}
               />
               <Input
-                label="Password"
+                label="Пароль"
                 name="password"
                 type="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Enter your password"
+                placeholder="Введите пароль"
                 icon={<LockIcon />}
               />
 
@@ -147,15 +147,15 @@ export const LoginPage: React.FC = () => {
               )}
 
               <Button type="submit" variant="gradient" size="lg" isLoading={isLoading}>
-                Sign in
+                Войти
               </Button>
             </form>
 
             <div className="mt-8 text-center">
               <p className="text-gray-500">
-                Don't have an account?{' '}
+                Нет аккаунта?{' '}
                 <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
-                  Create one now
+                  Зарегистрируйтесь
                 </Link>
               </p>
             </div>

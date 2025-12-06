@@ -23,23 +23,23 @@ export const HomePage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">AnonifyNeuro</h1>
           <div className="flex gap-4 items-center">
             <Link to="/chats" className="text-indigo-600 hover:text-indigo-800 font-medium">
-              Chats
+              Чаты
             </Link>
             <div className="w-32">
               <Button variant="outline" onClick={handleLogout}>
-                Sign out
+                Выйти
               </Button>
             </div>
           </div>
         </div>
         
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Welcome!</h2>
+          <h2 className="text-xl font-semibold mb-4">Добро пожаловать!</h2>
           <p className="text-gray-600 mb-4">
-            You are successfully logged in. This is the dashboard where you will be able to upload images for license plate redaction.
+            Вы успешно вошли в систему. Здесь вы можете загружать изображения для скрытия номерных знаков.
           </p>
           <Link to="/chats">
-            <Button variant="gradient">Go to Chats</Button>
+            <Button variant="gradient">Перейти к чатам</Button>
           </Link>
         </div>
       </div>

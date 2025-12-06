@@ -8,8 +8,12 @@ vi.mock('../api/chats', () => ({
   chatsApi: {
     listChats: vi.fn(),
     createChat: vi.fn(),
+    updateChat: vi.fn(),
+    deleteChat: vi.fn(),
+    getChat: vi.fn(),
     getMessages: vi.fn(),
     sendMessage: vi.fn(),
+    uploadFile: vi.fn(),
   },
 }));
 
@@ -37,35 +41,78 @@ describe('ChatsPage', () => {
     });
   });
 
-  it('creates a new chat', async () => {
+  it('creates a new chat with default name', async () => {
     vi.mocked(chatsApi.listChats).mockResolvedValue([]);
     vi.mocked(chatsApi.createChat).mockResolvedValue({
       id: 3,
-      title: 'New Chat',
+      title: 'New Chat 1',
       created_at: '2025-01-03T00:00:00Z',
     });
 
     renderWithRouter(<ChatsPage />);
 
-    const input = screen.getByPlaceholderText('New chat title');
-    const button = screen.getByText('New');
-
-    fireEvent.change(input, { target: { value: 'New Chat' } });
-    fireEvent.click(button);
+    const newChatButton = screen.getByText('Новый чат');
+    fireEvent.click(newChatButton);
 
     await waitFor(() => {
-      expect(chatsApi.createChat).toHaveBeenCalledWith({ title: 'New Chat' });
+      expect(chatsApi.createChat).toHaveBeenCalled();
     });
   });
 
-  it('does not create chat with empty title', async () => {
-    vi.mocked(chatsApi.listChats).mockResolvedValue([]);
+  it('can rename a chat', async () => {
+    const mockChats = [
+      { id: 1, title: 'Test Chat', created_at: '2025-01-01T00:00:00Z' },
+    ];
+    vi.mocked(chatsApi.listChats).mockResolvedValue(mockChats);
+    vi.mocked(chatsApi.updateChat).mockResolvedValue({
+      id: 1,
+      title: 'Renamed Chat',
+      created_at: '2025-01-01T00:00:00Z',
+    });
 
     renderWithRouter(<ChatsPage />);
 
-    const button = screen.getByText('New');
-    fireEvent.click(button);
+    await waitFor(() => {
+      expect(screen.getByText('Test Chat')).toBeInTheDocument();
+    });
 
-    expect(chatsApi.createChat).not.toHaveBeenCalled();
+    const renameButton = screen.getByTitle('Переименовать чат');
+    fireEvent.click(renameButton);
+
+    const input = screen.getByDisplayValue('Test Chat');
+    fireEvent.change(input, { target: { value: 'Renamed Chat' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(chatsApi.updateChat).toHaveBeenCalledWith(1, { title: 'Renamed Chat' });
+    });
+  });
+
+  it('can delete a chat', async () => {
+    const mockChats = [
+      { id: 1, title: 'Test Chat', created_at: '2025-01-01T00:00:00Z' },
+    ];
+    vi.mocked(chatsApi.listChats).mockResolvedValue(mockChats);
+    vi.mocked(chatsApi.deleteChat).mockResolvedValue(undefined);
+
+    renderWithRouter(<ChatsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Chat')).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByTitle('Удалить чат');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Удалить этот чат?')).toBeInTheDocument();
+    });
+
+    const confirmButton = screen.getByText('Удалить');
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(chatsApi.deleteChat).toHaveBeenCalledWith(1);
+    });
   });
 });

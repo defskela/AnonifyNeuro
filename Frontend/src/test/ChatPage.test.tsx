@@ -8,14 +8,17 @@ vi.mock('../api/chats', () => ({
   chatsApi: {
     listChats: vi.fn(),
     createChat: vi.fn(),
+    getChat: vi.fn(),
     getMessages: vi.fn(),
     sendMessage: vi.fn(),
+    uploadFile: vi.fn(),
   },
 }));
 
 describe('ChatPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(chatsApi.getChat).mockResolvedValue({ id: 1, title: 'Test Chat', created_at: '2025-01-01T00:00:00Z' });
   });
 
   it('renders messages', async () => {
@@ -57,11 +60,12 @@ describe('ChatPage', () => {
       </MemoryRouter>
     );
 
-    const input = screen.getByPlaceholderText('Type your message...');
-    const button = screen.getByText('Send');
-
+    const input = screen.getByPlaceholderText(/Введите сообщение/i);
     fireEvent.change(input, { target: { value: 'Test message' } });
-    fireEvent.click(button);
+    
+    const buttons = screen.getAllByRole('button');
+    const sendButton = buttons.find(b => b.classList.contains('from-indigo-600'));
+    fireEvent.click(sendButton!);
 
     await waitFor(() => {
       expect(chatsApi.sendMessage).toHaveBeenCalledWith(1, {
@@ -82,8 +86,9 @@ describe('ChatPage', () => {
       </MemoryRouter>
     );
 
-    const button = screen.getByText('Send');
-    fireEvent.click(button);
+    const buttons = screen.getAllByRole('button');
+    const sendButton = buttons.find(b => b.classList.contains('bg-gradient-to-r'));
+    fireEvent.click(sendButton!);
 
     expect(chatsApi.sendMessage).not.toHaveBeenCalled();
   });
