@@ -152,9 +152,20 @@ export const ChatPage: React.FC = () => {
         
         const redactResult = await chatsApi.uploadFile(selectedFile);
         
+        let resultContent = `Обнаружено номеров: ${redactResult.detections_count}`;
+        if (redactResult.detections.length > 0) {
+          resultContent += '\n\nНайденные области:';
+          redactResult.detections.forEach((det, i) => {
+            resultContent += `\n${i + 1}. [${det.x1}, ${det.y1}] - [${det.x2}, ${det.y2}] (${Math.round(det.confidence * 100)}%)`;
+          });
+        }
+        
         const botMessage = await chatsApi.sendMessage(Number(chatId), {
           sender: 'assistant',
-          content: `Файл успешно обработан!\nID задачи: ${redactResult.task_id}\nСтатус: ${redactResult.status}`
+          content: resultContent,
+          image_url: redactResult.redacted_image_base64 
+            ? `data:image/png;base64,${redactResult.redacted_image_base64}` 
+            : undefined
         });
         setMessages(prev => [...prev, botMessage]);
         
@@ -173,7 +184,7 @@ export const ChatPage: React.FC = () => {
           try {
             const botMessage = await chatsApi.sendMessage(Number(chatId), {
               sender: 'assistant',
-              content: `Ответ на: "${userMessage.content}"`
+              content: `Загрузите изображение для обработки`
             });
             setMessages(prev => [...prev, botMessage]);
           } catch (e) {}
@@ -182,6 +193,11 @@ export const ChatPage: React.FC = () => {
       setContent('');
     } catch (e) {
       setUploading(false);
+      const errorMessage = await chatsApi.sendMessage(Number(chatId), {
+        sender: 'assistant',
+        content: `Ошибка обработки. Попробуйте еще раз.`
+      });
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }

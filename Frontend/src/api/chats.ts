@@ -32,10 +32,11 @@ export const chatsApi = {
     const res = await client.post(`/chats/${chatId}/messages`, payload);
     return res.data;
   },
-  uploadFile: async (file: File, types?: string): Promise<RedactResponse> => {
+  uploadFile: async (file: File, confidenceThreshold: number = 0.5): Promise<RedactResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    if (types) formData.append('types', types);
+    formData.append('confidence_threshold', confidenceThreshold.toString());
+    formData.append('return_image', 'true');
     const res = await client.post('/redact', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
