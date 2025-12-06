@@ -65,12 +65,13 @@ export const RegisterPage: React.FC = () => {
     setError('');
 
     try {
-      await authApi.register({
+      const response = await authApi.register({
         username: formData.username,
         email: formData.email,
         password: formData.password
       });
-      navigate('/login');
+      localStorage.setItem('access_token', response.jwt_token);
+      navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to register. Please try again.');
     } finally {

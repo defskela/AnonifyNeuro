@@ -46,7 +46,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       const response = await authApi.login(formData);
-      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('access_token', response.jwt_token);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to login. Please check your credentials.');

@@ -7,8 +7,9 @@ export const authApi = {
     return response.data;
   },
 
-  register: async (credentials: RegisterCredentials): Promise<void> => {
-    await client.post('/auth/register', credentials);
+  register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
+    const response = await client.post<AuthResponse>('/auth/register', credentials);
+    return response.data;
   },
 
   logout: async (): Promise<void> => {
