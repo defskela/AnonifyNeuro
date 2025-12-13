@@ -26,9 +26,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
   backend:
     build: ./Backend
+    command: >
+      sh -c "alembic upgrade head && 
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     environment:
@@ -38,6 +42,21 @@ services:
       db:
         condition: service_healthy
       ml:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build: ./Frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
         condition: service_healthy
 
 volumes:

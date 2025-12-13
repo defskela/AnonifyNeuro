@@ -1,5 +1,5 @@
 import { client } from './client';
-import { ChatDetails, ChatSummary, RedactResponse } from '../types/chat';
+import type { ChatDetails, ChatSummary, RedactResponse } from '../types/chat';
 
 export const chatsApi = {
   listChats: async (): Promise<ChatSummary[]> => {
