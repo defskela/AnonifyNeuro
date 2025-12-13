@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { chatsApi } from '../api/chats';
 import { authApi } from '../api/auth';
-import { ChatSummary } from '../types/chat';
+import type { ChatSummary } from '../types/chat';
 import { Button } from '../components/ui/Button';
 
 const PlusIcon = () => (

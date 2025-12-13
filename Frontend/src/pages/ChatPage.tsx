@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { chatsApi } from '../api/chats';
-import { Message, ChatDetails } from '../types/chat';
+import type { Message, ChatDetails } from '../types/chat';
 
 const ArrowLeftIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
