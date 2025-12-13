@@ -8,14 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, chats, redact
 
 
-# def run_migrations():
-#     alembic_cfg = Config("alembic.ini")
-#     command.upgrade(alembic_cfg, "head")
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    #run_migrations()
     yield
 
 
