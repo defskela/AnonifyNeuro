@@ -23,6 +23,7 @@ class BoundingBox(BaseModel):
     x2: int
     y2: int
     confidence: float
+    class_name: str = "unknown"
 
 class DetectionResult(BaseModel):
     success: bool
