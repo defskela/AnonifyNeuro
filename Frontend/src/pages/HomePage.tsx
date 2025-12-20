@@ -25,6 +25,9 @@ export const HomePage: React.FC = () => {
             <Link to="/chats" className="text-indigo-600 hover:text-indigo-800 font-medium">
               Чаты
             </Link>
+            <Link to="/profile" className="text-indigo-600 hover:text-indigo-800 font-medium">
+              Профиль
+            </Link>
             <div className="w-32">
               <Button variant="outline" onClick={handleLogout}>
                 Выйти
@@ -32,7 +35,7 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Добро пожаловать!</h2>
           <p className="text-gray-600 mb-4">

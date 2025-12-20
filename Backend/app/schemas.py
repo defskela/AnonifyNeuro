@@ -22,6 +22,14 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
 
 
+class UserRead(BaseModel):
+    id: int
+    username: str
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ChatSummary(BaseModel):
     id: int
     title: Optional[str] = None
