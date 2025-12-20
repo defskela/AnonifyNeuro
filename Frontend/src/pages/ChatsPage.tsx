@@ -47,6 +47,12 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const UserIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
 export const ChatsPage: React.FC = () => {
   const navigate = useNavigate();
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -59,7 +65,7 @@ export const ChatsPage: React.FC = () => {
     let mounted = true;
     chatsApi.listChats().then(data => {
       if (mounted) setChats(data);
-    }).catch(() => {});
+    }).catch(() => { });
     return () => { mounted = false };
   }, []);
 
@@ -100,7 +106,7 @@ export const ChatsPage: React.FC = () => {
       const updated = await chatsApi.updateChat(chatId, { title: editTitle.trim() });
       setChats(prev => prev.map(c => c.id === chatId ? updated : c));
       setEditingId(null);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleCancelEdit = (e: React.MouseEvent) => {
@@ -123,7 +129,7 @@ export const ChatsPage: React.FC = () => {
       await chatsApi.deleteChat(chatId);
       setChats(prev => prev.filter(c => c.id !== chatId));
       setDeleteConfirmId(null);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleCancelDelete = (e: React.MouseEvent) => {
@@ -145,6 +151,13 @@ export const ChatsPage: React.FC = () => {
               <PlusIcon />
               Новый чат
             </Button>
+            <Link
+              to="/profile"
+              className="p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-gray-200 transition-colors"
+              title="Профиль"
+            >
+              <UserIcon />
+            </Link>
             <button
               onClick={handleLogout}
               className="p-2.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl border border-gray-200 transition-colors"

@@ -128,6 +128,18 @@ def refresh(
     return {"jwt_token": new_token}
 
 
+@router.get("/profile", response_model=schemas.UserRead)
+def read_users_me(
+    current_user_id: int = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    user = db.query(models.User).filter(
+        models.User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.put("/profile")
 def update_profile(
     update_payload: schemas.UserUpdate,

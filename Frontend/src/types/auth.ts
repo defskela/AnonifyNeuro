@@ -13,3 +13,14 @@ export interface AuthResponse {
   jwt_token: string;
   message?: string;
 }
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+}
+
+export interface UserUpdate {
+  username?: string;
+  password?: string;
+}
