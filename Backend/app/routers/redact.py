@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from app import database, models
 from app.routers.auth import get_current_user
+from app.storage import storage
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -36,7 +37,9 @@ class RedactResponse(BaseModel):
     status: str
     detections_count: int
     detections: List[BoundingBox]
+    original_image_url: Optional[str] = None
     redacted_image_base64: Optional[str] = None
+    redacted_image_url: Optional[str] = None
 
 async def call_ml_service(file_content: bytes, filename: str) -> DetectionResult:
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -87,13 +90,22 @@ async def redact_document(
     
     try:
         ml_result = await call_ml_service(file_content, file.filename or "image.jpg")
+
+        # Upload original image to MinIO
+        original_filename = f"{task_id}/original.jpg" # Assuming jpeg/png, strictly we should check mime type
+        storage.upload_file(file_content, original_filename, file.content_type or "image/jpeg")
+        original_image_url = storage.get_presigned_url(original_filename)
         
         filtered_detections = [d for d in ml_result.detections if d.confidence >= confidence_threshold]
         
-        redacted_image_base64 = None
+        redacted_image_url = None
         if return_image and filtered_detections:
             redacted_bytes = redact_image(file_content, ml_result.detections, confidence_threshold)
-            redacted_image_base64 = base64.b64encode(redacted_bytes).decode("utf-8")
+            
+            # Upload to MinIO
+            object_name = f"{task_id}/redacted.png"
+            storage.upload_file(redacted_bytes, object_name, "image/png")
+            redacted_image_url = storage.get_presigned_url(object_name)
         
         task.status = models.TaskStatus.success
         task.details = f"Found {len(filtered_detections)} license plate(s)"
@@ -104,16 +116,18 @@ async def redact_document(
             status="success",
             detections_count=len(filtered_detections),
             detections=filtered_detections,
-            redacted_image_base64=redacted_image_base64
+            original_image_url=original_image_url,
+            redacted_image_base64=None,
+            redacted_image_url=redacted_image_url
         )
         
     except httpx.RequestError as e:
-        task.status = models.TaskStatus.failed
+        task.status = models.TaskStatus.error
         task.details = f"ML service unavailable: {str(e)}"
         db.commit()
         raise HTTPException(status_code=503, detail="ML service unavailable")
     except Exception as e:
-        task.status = models.TaskStatus.failed
+        task.status = models.TaskStatus.error
         task.details = f"Processing error: {str(e)}"
         db.commit()
         raise HTTPException(status_code=500, detail=str(e))

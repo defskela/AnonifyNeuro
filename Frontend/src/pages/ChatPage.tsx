@@ -70,15 +70,15 @@ export const ChatPage: React.FC = () => {
   useEffect(() => {
     if (!chatId) return;
     let mounted = true;
-    
+
     chatsApi.getChat(Number(chatId)).then(data => {
       if (mounted) setChatDetails(data);
-    }).catch(() => {});
-    
+    }).catch(() => { });
+
     chatsApi.getMessages(Number(chatId)).then(data => {
       if (mounted) setMessages(data);
-    }).catch(() => {});
-    
+    }).catch(() => { });
+
     return () => { mounted = false };
   }, [chatId]);
 
@@ -107,7 +107,7 @@ export const ChatPage: React.FC = () => {
       const updated = await chatsApi.updateChat(Number(chatId), { title: editTitle.trim() });
       setChatDetails(updated);
       setIsEditing(false);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleCancelEdit = () => {
@@ -120,7 +120,7 @@ export const ChatPage: React.FC = () => {
     try {
       await chatsApi.deleteChat(Number(chatId));
       navigate('/chats');
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,37 +138,31 @@ export const ChatPage: React.FC = () => {
 
   const handleSend = async () => {
     if ((!content.trim() && !selectedFile) || !chatId) return;
-    
+
     setLoading(true);
     try {
       if (selectedFile) {
         setUploading(true);
+
+        // First upload/redact to get URLs
+        const redactResult = await chatsApi.uploadFile(selectedFile);
+
         const userMessage = await chatsApi.sendMessage(Number(chatId), {
           sender: 'user',
           content: content.trim() || `Загружено: ${selectedFile.name}`,
-          image_url: previewUrl || undefined
+          image_url: redactResult.original_image_url || previewUrl || undefined
         });
         setMessages(prev => [...prev, userMessage]);
-        
-        const redactResult = await chatsApi.uploadFile(selectedFile);
-        
-        let resultContent = `Обнаружено номеров: ${redactResult.detections_count}`;
-        if (redactResult.detections.length > 0) {
-          resultContent += '\n\nНайденные области:';
-          redactResult.detections.forEach((det, i) => {
-            resultContent += `\n${i + 1}. [${det.x1}, ${det.y1}] - [${det.x2}, ${det.y2}] (${Math.round(det.confidence * 100)}%)`;
-          });
-        }
-        
+
         const botMessage = await chatsApi.sendMessage(Number(chatId), {
           sender: 'assistant',
-          content: resultContent,
-          image_url: redactResult.redacted_image_base64 
-            ? `data:image/png;base64,${redactResult.redacted_image_base64}` 
-            : undefined
+          content: '',
+          image_url: redactResult.redacted_image_url || (redactResult.redacted_image_base64
+            ? `data:image/png;base64,${redactResult.redacted_image_base64}`
+            : undefined)
         });
         setMessages(prev => [...prev, botMessage]);
-        
+
         setSelectedFile(null);
         setPreviewUrl(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -187,7 +181,7 @@ export const ChatPage: React.FC = () => {
               content: `Загрузите изображение для обработки`
             });
             setMessages(prev => [...prev, botMessage]);
-          } catch (e) {}
+          } catch (e) { }
         }, 500);
       }
       setContent('');
@@ -309,11 +303,10 @@ export const ChatPage: React.FC = () => {
               className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                  msg.sender === 'user'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-md'
-                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
-                }`}
+                className={`max-w-[70%] px-4 py-3 rounded-2xl ${msg.sender === 'user'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-md'
+                  : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
+                  }`}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
                 {msg.image_url && (
