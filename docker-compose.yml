@@ -38,10 +38,16 @@ services:
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/anonifyneuro
       ML_SERVICE_URL: http://ml:8001
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: anonify-images
     depends_on:
       db:
         condition: service_healthy
       ml:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
     healthcheck:
@@ -50,6 +56,23 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
   frontend:
     build: ./Frontend
@@ -61,3 +84,4 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:
