@@ -115,3 +115,15 @@ class ChatFileRead(BaseModel):
 
 class ChatFileDownloadResponse(BaseModel):
     url: str
+
+
+class ExternalWeatherRead(BaseModel):
+    city: str
+    country: str
+    temperature_c: float
+    feels_like_c: float
+    description: str
+    humidity: int
+    wind_speed: float
+    source: str
+    fetched_at: datetime

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { chatsApi } from '../api/chats';
 import type { Message, ChatDetails, ChatFile } from '../types/chat';
+import { SeoMeta } from '../components/seo/SeoMeta';
 
 const ArrowLeftIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,41 +77,39 @@ export const ChatPage: React.FC = () => {
     if (!chatId) return;
     let mounted = true;
 
-    chatsApi.getChat(Number(chatId)).then(data => {
-      if (mounted) setChatDetails(data);
-    }).catch((err: any) => {
+    const loadData = async () => {
+      setFilesLoading(true);
+      const [chatResult, messagesResult, filesResult] = await Promise.allSettled([
+        chatsApi.getChat(Number(chatId)),
+        chatsApi.getMessages(Number(chatId)),
+        chatsApi.listChatFiles(Number(chatId)),
+      ]);
+
       if (!mounted) return;
-      if (err?.response?.status === 403) {
+
+      if (chatResult.status === 'fulfilled') {
+        setChatDetails(chatResult.value);
+      } else if (chatResult.reason?.response?.status === 403) {
         setError('Недостаточно прав для доступа к этому чату.');
-        return;
+      } else {
+        setError('Не удалось загрузить чат.');
       }
-      setError('Не удалось загрузить чат.');
-    });
 
-    chatsApi.getMessages(Number(chatId)).then(data => {
-      if (mounted) setMessages(data);
-    }).catch((err: any) => {
-      if (!mounted) return;
-      if (err?.response?.status === 403) {
+      if (messagesResult.status === 'fulfilled') {
+        setMessages(messagesResult.value);
+      } else if (messagesResult.reason?.response?.status === 403) {
         setError('Недостаточно прав для просмотра сообщений этого чата.');
-        return;
       }
-      setError('Не удалось загрузить сообщения.');
-    });
 
-    setFilesLoading(true);
-    chatsApi.listChatFiles(Number(chatId)).then(data => {
-      if (mounted) setChatFiles(data);
-    }).catch((err: any) => {
-      if (!mounted) return;
-      if (err?.response?.status === 403) {
+      if (filesResult.status === 'fulfilled') {
+        setChatFiles(filesResult.value);
+      } else if (filesResult.reason?.response?.status === 403) {
         setError('Недостаточно прав для просмотра файлов этого чата.');
-        return;
       }
-      setError('Не удалось загрузить файлы чата.');
-    }).finally(() => {
-      if (mounted) setFilesLoading(false);
-    });
+      setFilesLoading(false);
+    };
+
+    void loadData();
 
     return () => { mounted = false };
   }, [chatId]);
@@ -303,6 +302,12 @@ export const ChatPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
+      <SeoMeta
+        title={`Чат #${chatId ?? ''} - AnonifyNeuro`}
+        description="Рабочий чат для анонимизации изображений."
+        path={`/chats/${chatId ?? ''}`}
+        noindex
+      />
       <div className="bg-white border-b px-6 py-4 flex items-center gap-4 shadow-sm shrink-0">
         <Link to="/chats" className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors">
           <ArrowLeftIcon />
@@ -463,7 +468,7 @@ export const ChatPage: React.FC = () => {
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
                 {msg.image_url && (
-                  <img src={msg.image_url} alt="" className="mt-2 rounded-lg max-w-full max-h-64 object-contain" />
+                  <img src={msg.image_url} alt="Обработанное изображение" loading="lazy" className="mt-2 rounded-lg max-w-full max-h-64 object-contain" />
                 )}
                 <p className={`text-xs mt-2 ${msg.sender === 'user' ? 'text-indigo-200' : 'text-gray-400'}`}>
                   {new Date(msg.created_at || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -479,7 +484,7 @@ export const ChatPage: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           {selectedFile && previewUrl && (
             <div className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
-              <img src={previewUrl} alt="Preview" className="w-16 h-16 object-cover rounded-lg" />
+              <img src={previewUrl} alt="Предпросмотр выбранного файла" loading="lazy" className="w-16 h-16 object-cover rounded-lg" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
                 <p className="text-sm text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>

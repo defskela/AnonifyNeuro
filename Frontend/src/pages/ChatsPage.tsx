@@ -5,6 +5,7 @@ import { authApi } from '../api/auth';
 import { session } from '../auth/session';
 import type { ChatListParams, ChatSummary } from '../types/chat';
 import { Button } from '../components/ui/Button';
+import { SeoMeta } from '../components/seo/SeoMeta';
 
 const PlusIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,6 +205,12 @@ export const ChatsPage: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-gray-50">
+      <SeoMeta
+        title="Чаты - AnonifyNeuro"
+        description="Список рабочих чатов пользователя в AnonifyNeuro."
+        path="/chats"
+        noindex
+      />
       <div className="max-w-5xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
