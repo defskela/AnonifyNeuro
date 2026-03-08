@@ -1,7 +1,12 @@
+import pytest
+
 from app.routers.external import get_weather_service
 from app.services.weather_service import (ExternalApiUnavailableError,
                                           NormalizedWeather,
                                           WeatherRateLimitError)
+
+
+pytestmark = pytest.mark.integration
 
 
 def test_robots_txt(test_app):
