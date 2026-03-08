@@ -4,7 +4,8 @@ def _auth_headers(client, username: str, password: str) -> dict[str, str]:
         "password": password
     })
     assert response.status_code == 200
-    token = response.json()["jwt_token"]
+    body = response.json()
+    token = body.get("access_token") or body["jwt_token"]
     return {"Authorization": f"Bearer {token}"}
 
 

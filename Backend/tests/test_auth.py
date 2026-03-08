@@ -1,16 +1,27 @@
-import pytest
+def _extract_access_token(payload: dict) -> str:
+    return payload.get("access_token") or payload["jwt_token"]
 
-from app import models
+
+def _extract_refresh_token(payload: dict) -> str:
+    return payload["refresh_token"]
 
 
-def _auth_headers(client, username: str, password: str) -> dict[str, str]:
+def _login_tokens(client, username: str, password: str) -> dict[str, str]:
     response = client.post("/auth/login", json={
         "username": username,
         "password": password
     })
     assert response.status_code == 200
-    token = response.json()["jwt_token"]
-    return {"Authorization": f"Bearer {token}"}
+    body = response.json()
+    return {
+        "access": _extract_access_token(body),
+        "refresh": _extract_refresh_token(body),
+    }
+
+
+def _auth_headers(client, username: str, password: str) -> dict[str, str]:
+    tokens = _login_tokens(client, username, password)
+    return {"Authorization": f"Bearer {tokens['access']}"}
 
 
 def test_register_success(test_app):
@@ -21,18 +32,18 @@ def test_register_success(test_app):
     })
     assert response.status_code == 201
     data = response.json()
-    assert "message" in data
+    assert data["message"] == "User created successfully"
+    assert "access_token" in data
+    assert "refresh_token" in data
     assert "jwt_token" in data
 
 
 def test_register_duplicate_username(test_app):
-    # First register
     test_app.post("/auth/register", json={
         "username": "testuser2",
         "password": "testpass",
         "email": "test2@example.com"
     })
-    # Second register with same username
     response = test_app.post("/auth/register", json={
         "username": "testuser2",
         "password": "testpass",
@@ -43,13 +54,11 @@ def test_register_duplicate_username(test_app):
 
 
 def test_register_duplicate_email(test_app):
-    # First register
     test_app.post("/auth/register", json={
         "username": "testuser3",
         "password": "testpass",
         "email": "test4@example.com"
     })
-    # Second register with same email
     response = test_app.post("/auth/register", json={
         "username": "testuser4",
         "password": "testpass",
@@ -60,20 +69,19 @@ def test_register_duplicate_email(test_app):
 
 
 def test_login_success(test_app):
-    # Register first
     test_app.post("/auth/register", json={
         "username": "loginuser",
         "password": "loginpass",
         "email": "login@example.com"
     })
-    # Login
     response = test_app.post("/auth/login", json={
         "username": "loginuser",
         "password": "loginpass"
     })
     assert response.status_code == 200
     data = response.json()
-    assert "jwt_token" in data
+    assert "access_token" in data
+    assert "refresh_token" in data
 
 
 def test_login_invalid_credentials(test_app):
@@ -85,49 +93,51 @@ def test_login_invalid_credentials(test_app):
     assert "Invalid credentials" in response.json()["detail"]
 
 
-def test_logout_success(test_app):
-    # Login with testuser
-    login_response = test_app.post("/auth/login", json={
-        "username": "testuser",
-        "password": "testpass"
-    })
-    token = login_response.json()["jwt_token"]
+def test_refresh_success_and_rotation(test_app):
+    tokens = _login_tokens(test_app, "testuser", "testpass")
 
-    # Logout
-    response = test_app.post("/auth/logout", headers={
-        "Authorization": f"Bearer {token}"
+    refresh_response = test_app.post("/auth/refresh", json={
+        "refresh_token": tokens["refresh"]
     })
+    assert refresh_response.status_code == 200
+    refreshed = refresh_response.json()
+    assert "access_token" in refreshed
+    assert "refresh_token" in refreshed
+
+    replay_response = test_app.post("/auth/refresh", json={
+        "refresh_token": tokens["refresh"]
+    })
+    assert replay_response.status_code == 401
+    assert replay_response.json()["detail"] in {"Refresh token revoked", "Invalid refresh token"}
+
+
+def test_refresh_invalid_token(test_app):
+    response = test_app.post("/auth/refresh", json={
+        "refresh_token": "invalidtoken"
+    })
+    assert response.status_code == 401
+
+
+def test_logout_success_revokes_refresh(test_app):
+    tokens = _login_tokens(test_app, "testuser", "testpass")
+
+    response = test_app.post(
+        "/auth/logout",
+        json={"refresh_token": tokens["refresh"]},
+        headers={"Authorization": f"Bearer {tokens['access']}"}
+    )
     assert response.status_code == 200
     assert "Logged out successfully" in response.json()["message"]
+
+    refresh_after_logout = test_app.post("/auth/refresh", json={
+        "refresh_token": tokens["refresh"]
+    })
+    assert refresh_after_logout.status_code == 401
 
 
 def test_logout_no_token(test_app):
     response = test_app.post("/auth/logout")
     assert response.status_code == 403
-
-
-def test_refresh_success(test_app):
-    # Login with testuser
-    login_response = test_app.post("/auth/login", json={
-        "username": "testuser",
-        "password": "testpass"
-    })
-    token = login_response.json()["jwt_token"]
-
-    # Refresh
-    response = test_app.post("/auth/refresh", headers={
-        "Authorization": f"Bearer {token}"
-    })
-    assert response.status_code == 200
-    data = response.json()
-    assert "jwt_token" in data
-
-
-def test_refresh_invalid_token(test_app):
-    response = test_app.post("/auth/refresh", headers={
-        "Authorization": "Bearer invalidtoken"
-    })
-    assert response.status_code == 401
 
 
 def test_update_profile_success(test_app):
@@ -136,8 +146,7 @@ def test_update_profile_success(test_app):
         "password": "initialpass",
         "email": "profile@example.com"
     })
-    register_data = register_response.json()
-    token = register_data["jwt_token"]
+    token = _extract_access_token(register_response.json())
 
     update_response = test_app.put(
         "/auth/profile",
@@ -148,14 +157,14 @@ def test_update_profile_success(test_app):
     assert update_response.status_code == 200
     update_data = update_response.json()
     assert update_data["message"] == "Profile updated successfully"
-    assert "jwt_token" in update_data
+    assert "access_token" in update_data
+    assert "refresh_token" in update_data
 
     login_response = test_app.post("/auth/login", json={
         "username": "profileuser_updated",
         "password": "newpass"
     })
     assert login_response.status_code == 200
-    assert "jwt_token" in login_response.json()
 
 
 def test_update_profile_username_conflict(test_app):
@@ -164,7 +173,7 @@ def test_update_profile_username_conflict(test_app):
         "password": "pass1",
         "email": "conflict1@example.com"
     })
-    token_user1 = response_user1.json()["jwt_token"]
+    token_user1 = _extract_access_token(response_user1.json())
 
     test_app.post("/auth/register", json={
         "username": "conflict_target",
@@ -188,7 +197,7 @@ def test_update_profile_no_fields(test_app):
         "password": "nopass",
         "email": "nofields@example.com"
     })
-    token = register_response.json()["jwt_token"]
+    token = _extract_access_token(register_response.json())
 
     response = test_app.put(
         "/auth/profile",
@@ -206,7 +215,7 @@ def test_profile_includes_default_user_role(test_app):
         "password": "rolepass",
         "email": "role_default_user@example.com"
     })
-    token = register_response.json()["jwt_token"]
+    token = _extract_access_token(register_response.json())
 
     response = test_app.get("/auth/profile", headers={
         "Authorization": f"Bearer {token}"
@@ -218,14 +227,10 @@ def test_profile_includes_default_user_role(test_app):
 
 
 def test_profile_includes_admin_role(test_app):
-    login_response = test_app.post("/auth/login", json={
-        "username": "adminuser",
-        "password": "adminpass"
-    })
-    token = login_response.json()["jwt_token"]
+    tokens = _login_tokens(test_app, "adminuser", "adminpass")
 
     response = test_app.get("/auth/profile", headers={
-        "Authorization": f"Bearer {token}"
+        "Authorization": f"Bearer {tokens['access']}"
     })
 
     assert response.status_code == 200
@@ -239,7 +244,7 @@ def test_admin_can_update_user_role(test_app):
         "password": "rolepass",
         "email": "role_target_user@example.com"
     })
-    target_token = target_register.json()["jwt_token"]
+    target_token = _extract_access_token(target_register.json())
     target_profile = test_app.get("/auth/profile", headers={
         "Authorization": f"Bearer {target_token}"
     })
@@ -263,7 +268,7 @@ def test_non_admin_cannot_update_user_role(test_app):
         "password": "rolepass",
         "email": "role_target_user_forbidden@example.com"
     })
-    target_token = target_register.json()["jwt_token"]
+    target_token = _extract_access_token(target_register.json())
     target_profile = test_app.get("/auth/profile", headers={
         "Authorization": f"Bearer {target_token}"
     })

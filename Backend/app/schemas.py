@@ -26,6 +26,22 @@ class UserRoleUpdate(BaseModel):
     role: Literal["user", "admin"]
 
 
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    # Backward compatibility for existing clients/tests.
+    jwt_token: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = None
+
+
 class UserRead(BaseModel):
     id: int
     username: str

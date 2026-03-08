@@ -12,7 +12,10 @@ export interface RegisterCredentials {
 }
 
 export interface AuthResponse {
-  jwt_token: string;
+  access_token: string;
+  refresh_token: string;
+  jwt_token?: string;
+  token_type?: string;
   message?: string;
 }
 
