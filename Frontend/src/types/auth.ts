@@ -1,3 +1,5 @@
+export type UserRole = 'user' | 'admin';
+
 export interface LoginCredentials {
   username: string;
   password: string;
@@ -18,7 +20,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  role: 'user' | 'admin';
+  role: UserRole;
 }
 
 export interface UserUpdate {

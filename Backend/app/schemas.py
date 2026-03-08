@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -20,6 +20,10 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
+
+
+class UserRoleUpdate(BaseModel):
+    role: Literal["user", "admin"]
 
 
 class UserRead(BaseModel):
