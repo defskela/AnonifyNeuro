@@ -9,8 +9,9 @@ export const HomePage: React.FC = () => {
   const role = session.getRole();
 
   const handleLogout = async () => {
+    const refreshToken = session.getRefreshToken() || undefined;
     try {
-      await authApi.logout();
+      await authApi.logout(refreshToken);
     } catch (error) {
     } finally {
       session.clear();

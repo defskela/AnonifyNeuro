@@ -94,8 +94,9 @@ export const ChatsPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    const refreshToken = session.getRefreshToken() || undefined;
     try {
-      await authApi.logout();
+      await authApi.logout(refreshToken);
     } catch (e) {
     } finally {
       session.clear();

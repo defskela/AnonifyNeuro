@@ -1,64 +1,29 @@
-from datetime import datetime, timedelta
-
 from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 
-from app import database, models, schemas
+from app import models, schemas
+from app.dependencies import get_auth_service
+from app.services.auth_service import AuthService
 
 router = APIRouter()
 
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security = HTTPBearer()
-
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(database.get_db)
+    auth_service: AuthService = Depends(get_auth_service)
 ):
     try:
-        payload = jwt.decode(credentials.credentials,
-                             SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        user = db.query(models.User).filter(
-            models.User.username == username).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        return user
-    except JWTError:
+        return auth_service.get_current_user_from_access_token(credentials.credentials)
+    except PermissionError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
 
 def require_roles(*roles: str) -> Callable:
@@ -74,84 +39,66 @@ def require_roles(*roles: str) -> Callable:
 
 
 @router.post("/register", status_code=201)
-def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    username = user.username
-    password = user.password
-    email = user.email
-
-    if not username or not password or not email:
+def register(
+    user: schemas.UserCreate,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    try:
+        token_pair = auth_service.register(user)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid data")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    db_user = db.query(models.User).filter(
-        models.User.username == username).first()
-    if db_user:
-        raise HTTPException(
-            status_code=400, detail="Username already registered")
-
-    db_email = db.query(models.User).filter(models.User.email == email).first()
-    if db_email:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    hashed_password = get_password_hash(password)
-    new_user = models.User(username=username, email=email,
-                           hashed_password=hashed_password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": username}, expires_delta=access_token_expires
-    )
-    return {"message": "User created successfully", "jwt_token": access_token}
+    return {
+        "message": "User created successfully",
+        **token_pair.model_dump(),
+    }
 
 
 @router.post("/login")
-def login(user: schemas.UserLogin, db: Session = Depends(database.get_db)):
-    username = user.username
-    password = user.password
-
-    db_user = db.query(models.User).filter(
-        models.User.username == username).first()
-    if not db_user or not verify_password(password, db_user.hashed_password):
+def login(
+    user: schemas.UserLogin,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    try:
+        token_pair = auth_service.login(user)
+    except PermissionError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": username}, expires_delta=access_token_expires
-    )
-    return {"jwt_token": access_token}
+    return token_pair
 
 
 @router.post("/logout")
-def logout(current_user: models.User = Depends(get_current_user)):
+def logout(
+    payload: schemas.LogoutRequest | None = None,
+    current_user: models.User = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    refresh_token = payload.refresh_token if payload else None
+    auth_service.logout(current_user, refresh_token)
     return {"message": "Logged out successfully"}
 
 
 @router.post("/refresh")
 def refresh(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(database.get_db)
+    payload: schemas.RefreshTokenRequest,
+    auth_service: AuthService = Depends(get_auth_service)
 ):
-    user = db.query(models.User).filter(
-        models.User.id == current_user.id).first()
-    if not user:
+    try:
+        return auth_service.refresh(payload.refresh_token)
+    except PermissionError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except LookupError:
         raise HTTPException(status_code=404, detail="User not found")
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    new_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"jwt_token": new_token}
 
 
 @router.get("/profile", response_model=schemas.UserRead)
 def read_users_me(
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(database.get_db)
+    auth_service: AuthService = Depends(get_auth_service)
 ):
-    user = db.query(models.User).filter(
-        models.User.id == current_user.id).first()
+    user = auth_service.repository.get_user_by_id(current_user.id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -160,61 +107,29 @@ def read_users_me(
 @router.get("/users", response_model=list[schemas.UserRead])
 def list_users(
     _admin_user: models.User = Depends(require_roles("admin")),
-    db: Session = Depends(database.get_db)
+    auth_service: AuthService = Depends(get_auth_service)
 ):
-    users = db.query(models.User).order_by(models.User.id.asc()).all()
-    return users
+    return auth_service.list_users()
 
 
 @router.put("/profile")
 def update_profile(
     update_payload: schemas.UserUpdate,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(database.get_db)
+    auth_service: AuthService = Depends(get_auth_service)
 ):
-    if not update_payload.username and not update_payload.password:
-        raise HTTPException(status_code=400, detail="No fields to update")
-
-    user = db.query(models.User).filter(
-        models.User.id == current_user.id).first()
-    if not user:
+    try:
+        _, token_pair = auth_service.update_profile(current_user.id, update_payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except LookupError:
         raise HTTPException(status_code=404, detail="User not found")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    issue_new_token = False
-
-    if update_payload.username:
-        new_username = update_payload.username.strip()
-        if not new_username:
-            raise HTTPException(status_code=400, detail="Invalid username")
-
-        if new_username != user.username:
-            existing_user = db.query(models.User).filter(
-                models.User.username == new_username
-            ).first()
-            if existing_user:
-                raise HTTPException(
-                    status_code=400, detail="Username already registered")
-
-            user.username = new_username
-            issue_new_token = True
-
-    if update_payload.password:
-        new_password = update_payload.password.strip()
-        if not new_password:
-            raise HTTPException(status_code=400, detail="Invalid password")
-        user.hashed_password = get_password_hash(new_password)
-        issue_new_token = True
-
-    db.commit()
-    db.refresh(user)
-
-    response = {"message": "Profile updated successfully"}
-    if issue_new_token:
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        response["jwt_token"] = create_access_token(
-            data={"sub": user.username}, expires_delta=access_token_expires
-        )
-
+    response: dict[str, str] = {"message": "Profile updated successfully"}
+    if token_pair:
+        response.update(token_pair.model_dump())
     return response
 
 
@@ -223,13 +138,9 @@ def update_user_role(
     user_id: int,
     update_payload: schemas.UserRoleUpdate,
     _admin_user: models.User = Depends(require_roles("admin")),
-    db: Session = Depends(database.get_db)
+    auth_service: AuthService = Depends(get_auth_service)
 ):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
+    try:
+        return auth_service.update_user_role(user_id, update_payload.role)
+    except LookupError:
         raise HTTPException(status_code=404, detail="User not found")
-
-    user.role = update_payload.role
-    db.commit()
-    db.refresh(user)
-    return user

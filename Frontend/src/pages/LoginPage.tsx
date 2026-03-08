@@ -47,7 +47,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       const response = await authApi.login(formData);
-      session.setToken(response.jwt_token);
+      session.setTokens(response.access_token, response.refresh_token);
       const profile = await authApi.getProfile();
       session.setRole(profile.role);
       navigate('/');

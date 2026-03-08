@@ -66,8 +66,8 @@ export const ProfilePage: React.FC = () => {
 
             const response = await authApi.updateProfile(updateData);
 
-            if (response.jwt_token) {
-                localStorage.setItem('access_token', response.jwt_token);
+            if (response.access_token && response.refresh_token) {
+                session.setTokens(response.access_token, response.refresh_token);
             }
 
             setSuccess('Profile updated successfully');

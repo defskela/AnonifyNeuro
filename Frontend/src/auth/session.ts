@@ -1,6 +1,7 @@
 export type Role = 'user' | 'admin';
 
 const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 const USER_ROLE_KEY = 'user_role';
 
 export const session = {
@@ -10,6 +11,19 @@ export const session = {
 
   setToken(token: string): void {
     localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  },
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  },
+
+  setRefreshToken(token: string): void {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  },
+
+  setTokens(accessToken: string, refreshToken: string): void {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   },
 
   getRole(): Role | null {
@@ -26,6 +40,7 @@ export const session = {
 
   clear(): void {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_ROLE_KEY);
   },
 };
