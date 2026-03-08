@@ -4,6 +4,7 @@ import { authApi } from '../api/auth';
 import { session } from '../auth/session';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { SeoMeta } from '../components/seo/SeoMeta';
 
 const UserIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +60,12 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <main className="min-h-screen flex">
+      <SeoMeta
+        title="Вход - AnonifyNeuro"
+        description="Вход в AnonifyNeuro для безопасной обработки изображений и защиты персональных данных."
+        path="/login"
+      />
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-12 flex-col justify-between">
         <div>
@@ -161,10 +167,13 @@ export const LoginPage: React.FC = () => {
                   Зарегистрируйтесь
                 </Link>
               </p>
+              <p className="text-gray-500 mt-2">
+                О сервисе: <Link to="/about" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">публичная страница</Link>
+              </p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
