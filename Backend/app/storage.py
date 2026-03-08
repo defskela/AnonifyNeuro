@@ -64,4 +64,13 @@ class StorageClient:
             print(f"MinIO Get URL Error: {err}")
             raise
 
+    def delete_file(self, object_name: str) -> None:
+        try:
+            if not self._bucket_ready:
+                self._ensure_bucket()
+            self.internal_client.remove_object(self.bucket_name, object_name)
+        except S3Error as err:
+            print(f"MinIO Delete Error: {err}")
+            raise
+
 storage = StorageClient()

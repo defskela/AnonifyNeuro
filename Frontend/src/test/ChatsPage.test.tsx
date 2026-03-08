@@ -31,7 +31,13 @@ describe('ChatsPage', () => {
       { id: 1, title: 'Test Chat 1', created_at: '2025-01-01T00:00:00Z' },
       { id: 2, title: 'Test Chat 2', created_at: '2025-01-02T00:00:00Z' },
     ];
-    vi.mocked(chatsApi.listChats).mockResolvedValue(mockChats);
+    vi.mocked(chatsApi.listChats).mockResolvedValue({
+      items: mockChats,
+      total: 2,
+      page: 1,
+      page_size: 10,
+      pages: 1,
+    });
 
     renderWithRouter(<ChatsPage />);
 
@@ -42,7 +48,13 @@ describe('ChatsPage', () => {
   });
 
   it('creates a new chat with default name', async () => {
-    vi.mocked(chatsApi.listChats).mockResolvedValue([]);
+    vi.mocked(chatsApi.listChats).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 10,
+      pages: 1,
+    });
     vi.mocked(chatsApi.createChat).mockResolvedValue({
       id: 3,
       title: 'New Chat 1',
@@ -51,7 +63,11 @@ describe('ChatsPage', () => {
 
     renderWithRouter(<ChatsPage />);
 
-    const newChatButton = screen.getByText('Новый чат');
+    await waitFor(() => {
+      expect(chatsApi.listChats).toHaveBeenCalled();
+    });
+
+    const newChatButton = screen.getByRole('button', { name: 'Новый чат' });
     fireEvent.click(newChatButton);
 
     await waitFor(() => {
@@ -63,7 +79,13 @@ describe('ChatsPage', () => {
     const mockChats = [
       { id: 1, title: 'Test Chat', created_at: '2025-01-01T00:00:00Z' },
     ];
-    vi.mocked(chatsApi.listChats).mockResolvedValue(mockChats);
+    vi.mocked(chatsApi.listChats).mockResolvedValue({
+      items: mockChats,
+      total: 1,
+      page: 1,
+      page_size: 10,
+      pages: 1,
+    });
     vi.mocked(chatsApi.updateChat).mockResolvedValue({
       id: 1,
       title: 'Renamed Chat',
@@ -81,7 +103,10 @@ describe('ChatsPage', () => {
 
     const input = screen.getByDisplayValue('Test Chat');
     fireEvent.change(input, { target: { value: 'Renamed Chat' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    const saveButton = input.parentElement?.querySelector('button');
+    if (saveButton) {
+      fireEvent.click(saveButton);
+    }
 
     await waitFor(() => {
       expect(chatsApi.updateChat).toHaveBeenCalledWith(1, { title: 'Renamed Chat' });
@@ -92,7 +117,13 @@ describe('ChatsPage', () => {
     const mockChats = [
       { id: 1, title: 'Test Chat', created_at: '2025-01-01T00:00:00Z' },
     ];
-    vi.mocked(chatsApi.listChats).mockResolvedValue(mockChats);
+    vi.mocked(chatsApi.listChats).mockResolvedValue({
+      items: mockChats,
+      total: 1,
+      page: 1,
+      page_size: 10,
+      pages: 1,
+    });
     vi.mocked(chatsApi.deleteChat).mockResolvedValue(undefined);
 
     renderWithRouter(<ChatsPage />);

@@ -12,6 +12,10 @@ vi.mock('../api/chats', () => ({
     getMessages: vi.fn(),
     sendMessage: vi.fn(),
     uploadFile: vi.fn(),
+    listChatFiles: vi.fn(),
+    uploadChatFile: vi.fn(),
+    getChatFileDownloadUrl: vi.fn(),
+    deleteChatFile: vi.fn(),
   },
 }));
 
@@ -19,6 +23,7 @@ describe('ChatPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(chatsApi.getChat).mockResolvedValue({ id: 1, title: 'Test Chat', created_at: '2025-01-01T00:00:00Z' });
+    vi.mocked(chatsApi.listChatFiles).mockResolvedValue([]);
   });
 
   it('renders messages', async () => {
