@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { authApi } from '../api/auth';
+import { getErrorStatus } from '../utils/httpError';
 import type { User, UserRole } from '../types/auth';
 
 export const AdminPage: React.FC = () => {
@@ -27,11 +28,11 @@ export const AdminPage: React.FC = () => {
         });
         setDraftRoles(nextDrafts);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (!mounted) {
           return;
         }
-        if (err?.response?.status === 403) {
+        if (getErrorStatus(err) === 403) {
           setError('Недостаточно прав для управления ролями.');
         } else {
           setError('Не удалось загрузить пользователей.');
@@ -72,10 +73,11 @@ export const AdminPage: React.FC = () => {
       const updated = await authApi.updateUserRole(user.id, nextRole);
       setUsers((prev) => prev.map((u) => (u.id === user.id ? updated : u)));
       setSuccess(`Роль пользователя ${updated.username} обновлена на ${updated.role}.`);
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      if (status === 403) {
         setError('Недостаточно прав для изменения ролей.');
-      } else if (err?.response?.status === 404) {
+      } else if (status === 404) {
         setError('Пользователь не найден. Обновите страницу.');
       } else {
         setError('Ошибка обновления роли. Попробуйте еще раз.');

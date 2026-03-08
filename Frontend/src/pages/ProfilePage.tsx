@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { session } from '../auth/session';
@@ -19,11 +19,7 @@ export const ProfilePage: React.FC = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    useEffect(() => {
-        fetchProfile();
-    }, []);
-
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         try {
             const userData = await authApi.getProfile();
             setUser(userData);
@@ -35,7 +31,11 @@ export const ProfilePage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        void fetchProfile();
+    }, [fetchProfile]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -72,8 +72,8 @@ export const ProfilePage: React.FC = () => {
 
             setSuccess('Profile updated successfully');
             setIsEditing(false);
-            fetchProfile();
-        } catch (err) {
+            void fetchProfile();
+        } catch {
             setError('Failed to update profile');
         } finally {
             setIsLoading(false);

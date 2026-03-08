@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { session } from '../auth/session';
 import { Button } from '../components/ui/Button';
 import { SeoMeta } from '../components/seo/SeoMeta';
 import { externalApi } from '../api/external';
+import { getErrorStatus } from '../utils/httpError';
 import type { WeatherResponse } from '../types/external';
 
 export const HomePage: React.FC = () => {
@@ -15,15 +16,15 @@ export const HomePage: React.FC = () => {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState('');
 
-  const loadWeather = async (targetCity: string) => {
+  const loadWeather = useCallback(async (targetCity: string) => {
     setWeatherLoading(true);
     setWeatherError('');
     try {
       const data = await externalApi.getWeather(targetCity);
       setWeather(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setWeather(null);
-      const status = err?.response?.status;
+      const status = getErrorStatus(err);
       if (status === 503) {
         setWeatherError('Сервис погоды временно недоступен. Основной функционал приложения работает в штатном режиме.');
       } else if (status === 429) {
@@ -34,17 +35,18 @@ export const HomePage: React.FC = () => {
     } finally {
       setWeatherLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    void loadWeather(city);
-  }, []);
+    void loadWeather('Moscow');
+  }, [loadWeather]);
 
   const handleLogout = async () => {
     const refreshToken = session.getRefreshToken() || undefined;
     try {
       await authApi.logout(refreshToken);
-    } catch (error) {
+    } catch {
+      // Ignore logout API failure and clear local session regardless.
     } finally {
       session.clear();
       navigate('/login');

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { session } from '../auth/session';
 import type { AuthResponse } from '../types/auth';
 
@@ -20,6 +21,10 @@ const refreshClient = axios.create({
 
 let refreshPromise: Promise<string> | null = null;
 
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
+
 client.interceptors.request.use((config) => {
   const token = session.getToken();
   if (token) {
@@ -30,8 +35,8 @@ client.interceptors.request.use((config) => {
 
 client.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config as any;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
     const status = error?.response?.status;
 
     if (!originalRequest || status !== 401 || originalRequest._retry) {

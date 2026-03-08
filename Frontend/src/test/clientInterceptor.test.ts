@@ -12,6 +12,24 @@ vi.mock('../auth/session', () => ({
 import { client } from '../api/client';
 import { session } from '../auth/session';
 
+type RejectedInterceptor = (error: {
+  config?: { url?: string; _retry?: boolean };
+  response?: { status?: number };
+}) => Promise<unknown>;
+
+const getRejectedHandler = (): RejectedInterceptor => {
+  const responseInterceptors = client.interceptors.response as unknown as {
+    handlers?: Array<{ rejected?: RejectedInterceptor }>;
+  };
+
+  const rejected = responseInterceptors.handlers?.[0]?.rejected;
+  if (!rejected) {
+    throw new Error('Response rejected interceptor is not registered');
+  }
+
+  return rejected;
+};
+
 describe('client interceptor session handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -19,7 +37,7 @@ describe('client interceptor session handling', () => {
   });
 
   it('clears session on 401 when refresh token is missing', async () => {
-    const rejected = (client.interceptors.response as any).handlers[0].rejected;
+    const rejected = getRejectedHandler();
     const error = {
       config: { url: '/chats', _retry: false },
       response: { status: 401 },
@@ -30,7 +48,7 @@ describe('client interceptor session handling', () => {
   });
 
   it('does not trigger refresh flow for auth endpoints', async () => {
-    const rejected = (client.interceptors.response as any).handlers[0].rejected;
+    const rejected = getRejectedHandler();
     const error = {
       config: { url: '/auth/login', _retry: false },
       response: { status: 401 },
