@@ -64,6 +64,7 @@ export const ChatPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,11 +74,25 @@ export const ChatPage: React.FC = () => {
 
     chatsApi.getChat(Number(chatId)).then(data => {
       if (mounted) setChatDetails(data);
-    }).catch(() => { });
+    }).catch((err: any) => {
+      if (!mounted) return;
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для доступа к этому чату.');
+        return;
+      }
+      setError('Не удалось загрузить чат.');
+    });
 
     chatsApi.getMessages(Number(chatId)).then(data => {
       if (mounted) setMessages(data);
-    }).catch(() => { });
+    }).catch((err: any) => {
+      if (!mounted) return;
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для просмотра сообщений этого чата.');
+        return;
+      }
+      setError('Не удалось загрузить сообщения.');
+    });
 
     return () => { mounted = false };
   }, [chatId]);
@@ -107,7 +122,11 @@ export const ChatPage: React.FC = () => {
       const updated = await chatsApi.updateChat(Number(chatId), { title: editTitle.trim() });
       setChatDetails(updated);
       setIsEditing(false);
-    } catch (e) { }
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        setError('Недостаточно прав для редактирования чата.');
+      }
+    }
   };
 
   const handleCancelEdit = () => {
@@ -120,7 +139,11 @@ export const ChatPage: React.FC = () => {
     try {
       await chatsApi.deleteChat(Number(chatId));
       navigate('/chats');
-    } catch (e) { }
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        setError('Недостаточно прав для удаления чата.');
+      }
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,11 +210,16 @@ export const ChatPage: React.FC = () => {
       setContent('');
     } catch (e) {
       setUploading(false);
-      const errorMessage = await chatsApi.sendMessage(Number(chatId), {
-        sender: 'assistant',
-        content: `Ошибка обработки. Попробуйте еще раз.`
-      });
-      setMessages(prev => [...prev, errorMessage]);
+      const status = (e as any)?.response?.status;
+      if (status === 403) {
+        setError('Недостаточно прав для отправки сообщений в этот чат.');
+      } else {
+        const errorMessage = await chatsApi.sendMessage(Number(chatId), {
+          sender: 'assistant',
+          content: `Ошибка обработки. Попробуйте еще раз.`
+        });
+        setMessages(prev => [...prev, errorMessage]);
+      }
     } finally {
       setLoading(false);
     }
@@ -264,6 +292,12 @@ export const ChatPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {error && (
+        <div className="bg-red-50 border-b border-red-200 px-6 py-3">
+          <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
 
       {showDeleteConfirm && (
         <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between">

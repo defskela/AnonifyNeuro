@@ -15,6 +15,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    role = Column(Enum("user", "admin", name="user_role"), default="user", nullable=False)
     chats = relationship(
         "Chat", back_populates="user", cascade="all, delete-orphan"
     )

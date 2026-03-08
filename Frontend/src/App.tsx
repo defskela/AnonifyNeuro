@@ -5,6 +5,8 @@ import { HomePage } from './pages/HomePage';
 import { ChatsPage } from './pages/ChatsPage';
 import { ChatPage } from './pages/ChatPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ForbiddenPage } from './pages/ForbiddenPage';
+import { AdminPage } from './pages/AdminPage';
 import { PrivateRoute } from './components/PrivateRoute';
 import './App.css';
 
@@ -14,6 +16,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forbidden" element={<ForbiddenPage />} />
         <Route
           path="/"
           element={
@@ -43,6 +46,14 @@ function App() {
           element={
             <PrivateRoute>
               <ProfilePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminPage />
             </PrivateRoute>
           }
         />

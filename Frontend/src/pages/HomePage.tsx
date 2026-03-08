@@ -1,17 +1,19 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
+import { session } from '../auth/session';
 import { Button } from '../components/ui/Button';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const role = session.getRole();
 
   const handleLogout = async () => {
     try {
       await authApi.logout();
     } catch (error) {
     } finally {
-      localStorage.removeItem('access_token');
+      session.clear();
       navigate('/login');
     }
   };
@@ -28,6 +30,11 @@ export const HomePage: React.FC = () => {
             <Link to="/profile" className="text-indigo-600 hover:text-indigo-800 font-medium">
               Профиль
             </Link>
+            {role === 'admin' && (
+              <Link to="/admin" className="text-indigo-600 hover:text-indigo-800 font-medium">
+                Админ
+              </Link>
+            )}
             <div className="w-32">
               <Button variant="outline" onClick={handleLogout}>
                 Выйти

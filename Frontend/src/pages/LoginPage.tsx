@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
+import { session } from '../auth/session';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
@@ -46,7 +47,9 @@ export const LoginPage: React.FC = () => {
 
     try {
       const response = await authApi.login(formData);
-      localStorage.setItem('access_token', response.jwt_token);
+      session.setToken(response.jwt_token);
+      const profile = await authApi.getProfile();
+      session.setRole(profile.role);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to login. Please check your credentials.');

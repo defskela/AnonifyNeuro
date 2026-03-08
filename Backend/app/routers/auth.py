@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from collections.abc import Callable
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -37,7 +39,10 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(database.get_db)):
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(database.get_db)
+):
     try:
         payload = jwt.decode(credentials.credentials,
                              SECRET_KEY, algorithms=[ALGORITHM])
@@ -50,10 +55,22 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        return user.id
+        return user
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+def require_roles(*roles: str) -> Callable:
+    def role_dependency(current_user: models.User = Depends(get_current_user)):
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        return current_user
+
+    return role_dependency
 
 
 @router.post("/register", status_code=201)
@@ -107,17 +124,17 @@ def login(user: schemas.UserLogin, db: Session = Depends(database.get_db)):
 
 
 @router.post("/logout")
-def logout(current_user: str = Depends(get_current_user)):
+def logout(current_user: models.User = Depends(get_current_user)):
     return {"message": "Logged out successfully"}
 
 
 @router.post("/refresh")
 def refresh(
-    current_user_id: int = Depends(get_current_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
     user = db.query(models.User).filter(
-        models.User.id == current_user_id).first()
+        models.User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -130,11 +147,11 @@ def refresh(
 
 @router.get("/profile", response_model=schemas.UserRead)
 def read_users_me(
-    current_user_id: int = Depends(get_current_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
     user = db.query(models.User).filter(
-        models.User.id == current_user_id).first()
+        models.User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -143,14 +160,14 @@ def read_users_me(
 @router.put("/profile")
 def update_profile(
     update_payload: schemas.UserUpdate,
-    current_user_id: int = Depends(get_current_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
     if not update_payload.username and not update_payload.password:
         raise HTTPException(status_code=400, detail="No fields to update")
 
     user = db.query(models.User).filter(
-        models.User.id == current_user_id).first()
+        models.User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 

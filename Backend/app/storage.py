@@ -19,17 +19,21 @@ class StorageClient:
             secure=MINIO_SECURE
         )
         self.bucket_name = MINIO_BUCKET
-        self._ensure_bucket()
+        self._bucket_ready = False
 
     def _ensure_bucket(self):
         try:
             if not self.internal_client.bucket_exists(self.bucket_name):
                 self.internal_client.make_bucket(self.bucket_name)
+            self._bucket_ready = True
         except S3Error as err:
             print(f"MinIO Error: {err}")
 
     def upload_file(self, file_data: bytes, object_name: str, content_type: str = "application/octet-stream") -> str:
         try:
+            if not self._bucket_ready:
+                self._ensure_bucket()
+
             self.internal_client.put_object(
                 self.bucket_name,
                 object_name,
@@ -56,9 +60,6 @@ class StorageClient:
             )
             
             return signer_client.get_presigned_url("GET", self.bucket_name, object_name)
-        except S3Error as err:
-            print(f"MinIO Get URL Error: {err}")
-            raise
         except S3Error as err:
             print(f"MinIO Get URL Error: {err}")
             raise

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { chatsApi } from '../api/chats';
 import { authApi } from '../api/auth';
+import { session } from '../auth/session';
 import type { ChatSummary } from '../types/chat';
 import { Button } from '../components/ui/Button';
 
@@ -60,12 +61,20 @@ export const ChatsPage: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
     chatsApi.listChats().then(data => {
       if (mounted) setChats(data);
-    }).catch(() => { });
+    }).catch((err: any) => {
+      if (!mounted) return;
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для просмотра чатов.');
+        return;
+      }
+      setError('Не удалось загрузить список чатов.');
+    });
     return () => { mounted = false };
   }, []);
 
@@ -75,7 +84,10 @@ export const ChatsPage: React.FC = () => {
       const newChat = await chatsApi.createChat();
       setChats(prev => [newChat, ...prev]);
       navigate(`/chats/${newChat.id}`);
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        setError('Недостаточно прав для создания чата.');
+      }
     } finally {
       setLoading(false);
     }
@@ -86,7 +98,7 @@ export const ChatsPage: React.FC = () => {
       await authApi.logout();
     } catch (e) {
     } finally {
-      localStorage.removeItem('access_token');
+      session.clear();
       navigate('/login');
     }
   };
@@ -106,7 +118,11 @@ export const ChatsPage: React.FC = () => {
       const updated = await chatsApi.updateChat(chatId, { title: editTitle.trim() });
       setChats(prev => prev.map(c => c.id === chatId ? updated : c));
       setEditingId(null);
-    } catch (e) { }
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        setError('Недостаточно прав для редактирования чата.');
+      }
+    }
   };
 
   const handleCancelEdit = (e: React.MouseEvent) => {
@@ -129,7 +145,11 @@ export const ChatsPage: React.FC = () => {
       await chatsApi.deleteChat(chatId);
       setChats(prev => prev.filter(c => c.id !== chatId));
       setDeleteConfirmId(null);
-    } catch (e) { }
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        setError('Недостаточно прав для удаления чата.');
+      }
+    }
   };
 
   const handleCancelDelete = (e: React.MouseEvent) => {
@@ -167,6 +187,12 @@ export const ChatsPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
         {chats.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">

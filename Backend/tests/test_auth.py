@@ -188,3 +188,36 @@ def test_update_profile_no_fields(test_app):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "No fields to update"
+
+
+def test_profile_includes_default_user_role(test_app):
+    register_response = test_app.post("/auth/register", json={
+        "username": "role_default_user",
+        "password": "rolepass",
+        "email": "role_default_user@example.com"
+    })
+    token = register_response.json()["jwt_token"]
+
+    response = test_app.get("/auth/profile", headers={
+        "Authorization": f"Bearer {token}"
+    })
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["role"] == "user"
+
+
+def test_profile_includes_admin_role(test_app):
+    login_response = test_app.post("/auth/login", json={
+        "username": "adminuser",
+        "password": "adminpass"
+    })
+    token = login_response.json()["jwt_token"]
+
+    response = test_app.get("/auth/profile", headers={
+        "Authorization": f"Bearer {token}"
+    })
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["role"] == "admin"

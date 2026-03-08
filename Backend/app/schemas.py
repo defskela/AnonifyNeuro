@@ -26,6 +26,7 @@ class UserRead(BaseModel):
     id: int
     username: str
     email: str
+    role: str
 
     model_config = ConfigDict(from_attributes=True)
 
