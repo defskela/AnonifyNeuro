@@ -3,6 +3,16 @@ import pytest
 from app import models
 
 
+def _auth_headers(client, username: str, password: str) -> dict[str, str]:
+    response = client.post("/auth/login", json={
+        "username": username,
+        "password": password
+    })
+    assert response.status_code == 200
+    token = response.json()["jwt_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_register_success(test_app):
     response = test_app.post("/auth/register", json={
         "username": "newuser",
@@ -221,3 +231,80 @@ def test_profile_includes_admin_role(test_app):
     assert response.status_code == 200
     payload = response.json()
     assert payload["role"] == "admin"
+
+
+def test_admin_can_update_user_role(test_app):
+    target_register = test_app.post("/auth/register", json={
+        "username": "role_target_user",
+        "password": "rolepass",
+        "email": "role_target_user@example.com"
+    })
+    target_token = target_register.json()["jwt_token"]
+    target_profile = test_app.get("/auth/profile", headers={
+        "Authorization": f"Bearer {target_token}"
+    })
+    target_user_id = target_profile.json()["id"]
+
+    admin_headers = _auth_headers(test_app, "adminuser", "adminpass")
+    update_response = test_app.patch(
+        f"/auth/users/{target_user_id}/role",
+        json={"role": "admin"},
+        headers=admin_headers
+    )
+
+    assert update_response.status_code == 200
+    payload = update_response.json()
+    assert payload["role"] == "admin"
+
+
+def test_non_admin_cannot_update_user_role(test_app):
+    target_register = test_app.post("/auth/register", json={
+        "username": "role_target_user_forbidden",
+        "password": "rolepass",
+        "email": "role_target_user_forbidden@example.com"
+    })
+    target_token = target_register.json()["jwt_token"]
+    target_profile = test_app.get("/auth/profile", headers={
+        "Authorization": f"Bearer {target_token}"
+    })
+    target_user_id = target_profile.json()["id"]
+
+    non_admin_headers = _auth_headers(test_app, "testuser", "testpass")
+    update_response = test_app.patch(
+        f"/auth/users/{target_user_id}/role",
+        json={"role": "admin"},
+        headers=non_admin_headers
+    )
+
+    assert update_response.status_code == 403
+    assert update_response.json()["detail"] == "Insufficient permissions"
+
+
+def test_admin_update_user_role_not_found(test_app):
+    admin_headers = _auth_headers(test_app, "adminuser", "adminpass")
+    update_response = test_app.patch(
+        "/auth/users/999999/role",
+        json={"role": "admin"},
+        headers=admin_headers
+    )
+
+    assert update_response.status_code == 404
+    assert update_response.json()["detail"] == "User not found"
+
+
+def test_admin_can_list_users(test_app):
+    headers = _auth_headers(test_app, "adminuser", "adminpass")
+    response = test_app.get("/auth/users", headers=headers)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload, list)
+    assert any(user["username"] == "testuser" for user in payload)
+
+
+def test_non_admin_cannot_list_users(test_app):
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    response = test_app.get("/auth/users", headers=headers)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Insufficient permissions"

@@ -157,6 +157,15 @@ def read_users_me(
     return user
 
 
+@router.get("/users", response_model=list[schemas.UserRead])
+def list_users(
+    _admin_user: models.User = Depends(require_roles("admin")),
+    db: Session = Depends(database.get_db)
+):
+    users = db.query(models.User).order_by(models.User.id.asc()).all()
+    return users
+
+
 @router.put("/profile")
 def update_profile(
     update_payload: schemas.UserUpdate,
@@ -207,3 +216,20 @@ def update_profile(
         )
 
     return response
+
+
+@router.patch("/users/{user_id}/role", response_model=schemas.UserRead)
+def update_user_role(
+    user_id: int,
+    update_payload: schemas.UserRoleUpdate,
+    _admin_user: models.User = Depends(require_roles("admin")),
+    db: Session = Depends(database.get_db)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = update_payload.role
+    db.commit()
+    db.refresh(user)
+    return user
