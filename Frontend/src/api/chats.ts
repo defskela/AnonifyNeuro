@@ -1,17 +1,21 @@
 import { client } from './client';
-import type { ChatDetails, ChatSummary, RedactResponse } from '../types/chat';
+import type {
+  ChatDetails,
+  ChatFile,
+  ChatListParams,
+  ChatListResponse,
+  ChatSummary,
+  RedactResponse,
+} from '../types/chat';
 
 export const chatsApi = {
-  listChats: async (): Promise<ChatSummary[]> => {
-    const res = await client.get('/chats');
+  listChats: async (params: ChatListParams = {}): Promise<ChatListResponse> => {
+    const res = await client.get('/chats', { params });
     return res.data;
   },
   getChat: async (chatId: number): Promise<ChatDetails> => {
-    const res = await client.get('/chats');
-    const chats = res.data as ChatDetails[];
-    const chat = chats.find(c => c.id === chatId);
-    if (!chat) throw new Error('Chat not found');
-    return chat;
+    const res = await client.get(`/chats/${chatId}`);
+    return res.data;
   },
   getMessages: async (chatId: number) => {
     const res = await client.get(`/chats/${chatId}/messages`);
@@ -41,5 +45,24 @@ export const chatsApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return res.data;
+  },
+  listChatFiles: async (chatId: number): Promise<ChatFile[]> => {
+    const res = await client.get(`/chats/${chatId}/files`);
+    return res.data;
+  },
+  uploadChatFile: async (chatId: number, file: File): Promise<ChatFile> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post(`/chats/${chatId}/files`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+  getChatFileDownloadUrl: async (chatId: number, fileId: number): Promise<string> => {
+    const res = await client.get(`/chats/${chatId}/files/${fileId}/download`);
+    return res.data.url;
+  },
+  deleteChatFile: async (chatId: number, fileId: number): Promise<void> => {
+    await client.delete(`/chats/${chatId}/files/${fileId}`);
   },
 };

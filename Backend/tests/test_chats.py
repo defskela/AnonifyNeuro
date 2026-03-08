@@ -15,15 +15,16 @@ def test_list_chats_returns_user_chats(test_app):
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert data, "Expected at least one chat for seeded user"
-    assert {"id", "created_at"}.issubset(data[0].keys())
+    assert isinstance(data, dict)
+    assert isinstance(data["items"], list)
+    assert data["items"], "Expected at least one chat for seeded user"
+    assert {"id", "created_at"}.issubset(data["items"][0].keys())
 
 
 def test_get_chat_messages_returns_messages(test_app):
     headers = _auth_headers(test_app, "testuser", "testpass")
     chats_response = test_app.get("/chats", headers=headers)
-    chat_id = chats_response.json()[0]["id"]
+    chat_id = chats_response.json()["items"][0]["id"]
 
     messages_response = test_app.get(
         f"/chats/{chat_id}/messages", headers=headers)
@@ -37,7 +38,7 @@ def test_get_chat_messages_returns_messages(test_app):
 def test_get_chat_messages_not_found_for_other_user(test_app):
     other_headers = _auth_headers(test_app, "otheruser", "otherpass")
     other_chats_response = test_app.get("/chats", headers=other_headers)
-    other_chat_id = other_chats_response.json()[0]["id"]
+    other_chat_id = other_chats_response.json()["items"][0]["id"]
 
     headers = _auth_headers(test_app, "testuser", "testpass")
     response = test_app.get(
@@ -139,7 +140,56 @@ def test_admin_sees_all_chats(test_app):
     response = test_app.get("/chats", headers=admin_headers)
 
     assert response.status_code == 200
-    chats = response.json()
+    chats = response.json()["items"]
     titles = {chat["title"] for chat in chats}
     assert "Onboarding" in titles
     assert "Private" in titles
+
+
+def test_chat_files_upload_list_download_delete_flow(test_app, monkeypatch):
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    chat_id = test_app.get("/chats", headers=headers).json()["items"][0]["id"]
+
+    monkeypatch.setattr("app.routers.chats.storage.upload_file", lambda *args, **kwargs: "ok")
+    monkeypatch.setattr("app.routers.chats.storage.get_presigned_url", lambda key: f"https://files.local/{key}")
+    monkeypatch.setattr("app.routers.chats.storage.delete_file", lambda *args, **kwargs: None)
+
+    upload_response = test_app.post(
+        f"/chats/{chat_id}/files",
+        files={"file": ("sample.png", b"1234", "image/png")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+    uploaded = upload_response.json()
+    assert uploaded["filename"] == "sample.png"
+    file_id = uploaded["id"]
+
+    list_response = test_app.get(f"/chats/{chat_id}/files", headers=headers)
+    assert list_response.status_code == 200
+    listed = list_response.json()
+    assert len(listed) == 1
+    assert listed[0]["id"] == file_id
+
+    download_response = test_app.get(f"/chats/{chat_id}/files/{file_id}/download", headers=headers)
+    assert download_response.status_code == 200
+    assert download_response.json()["url"].startswith("https://files.local/")
+
+    delete_response = test_app.delete(f"/chats/{chat_id}/files/{file_id}", headers=headers)
+    assert delete_response.status_code == 204
+
+
+def test_chat_files_forbidden_for_foreign_chat(test_app, monkeypatch):
+    owner_headers = _auth_headers(test_app, "otheruser", "otherpass")
+    owner_chat_id = test_app.get("/chats", headers=owner_headers).json()["items"][0]["id"]
+
+    monkeypatch.setattr("app.routers.chats.storage.upload_file", lambda *args, **kwargs: "ok")
+
+    headers = _auth_headers(test_app, "testuser", "testpass")
+    response = test_app.post(
+        f"/chats/{owner_chat_id}/files",
+        files={"file": ("sample.png", b"1234", "image/png")},
+        headers=headers,
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Insufficient permissions"

@@ -53,8 +53,21 @@ class ChatSummary(BaseModel):
     id: int
     title: Optional[str] = None
     created_at: datetime
+    owner_id: Optional[int] = None
+    owner_username: Optional[str] = None
+    messages_count: Optional[int] = None
+    has_images: Optional[bool] = None
+    last_activity_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ChatListResponse(BaseModel):
+    items: list[ChatSummary]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class ChatCreate(BaseModel):
@@ -86,3 +99,19 @@ class MessageRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ChatFileRead(BaseModel):
+    id: int
+    chat_id: int
+    uploaded_by: int
+    filename: str
+    content_type: str
+    size: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatFileDownloadResponse(BaseModel):
+    url: str

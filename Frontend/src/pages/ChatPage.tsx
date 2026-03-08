@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { chatsApi } from '../api/chats';
-import type { Message, ChatDetails } from '../types/chat';
+import type { Message, ChatDetails, ChatFile } from '../types/chat';
 
 const ArrowLeftIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,8 +65,12 @@ export const ChatPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
+  const [chatFiles, setChatFiles] = useState<ChatFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [filesActionLoading, setFilesActionLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!chatId) return;
@@ -92,6 +96,20 @@ export const ChatPage: React.FC = () => {
         return;
       }
       setError('Не удалось загрузить сообщения.');
+    });
+
+    setFilesLoading(true);
+    chatsApi.listChatFiles(Number(chatId)).then(data => {
+      if (mounted) setChatFiles(data);
+    }).catch((err: any) => {
+      if (!mounted) return;
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для просмотра файлов этого чата.');
+        return;
+      }
+      setError('Не удалось загрузить файлы чата.');
+    }).finally(() => {
+      if (mounted) setFilesLoading(false);
     });
 
     return () => { mounted = false };
@@ -225,6 +243,57 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  const handleChatFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !chatId) return;
+
+    setFilesActionLoading(true);
+    try {
+      const uploaded = await chatsApi.uploadChatFile(Number(chatId), file);
+      setChatFiles(prev => [uploaded, ...prev]);
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для загрузки файлов.');
+      } else {
+        setError('Не удалось загрузить файл.');
+      }
+    } finally {
+      setFilesActionLoading(false);
+      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadChatFile = async (fileId: number) => {
+    if (!chatId) return;
+    try {
+      const url = await chatsApi.getChatFileDownloadUrl(Number(chatId), fileId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для скачивания файла.');
+      } else {
+        setError('Не удалось получить ссылку на скачивание.');
+      }
+    }
+  };
+
+  const handleDeleteChatFile = async (fileId: number) => {
+    if (!chatId) return;
+    setFilesActionLoading(true);
+    try {
+      await chatsApi.deleteChatFile(Number(chatId), fileId);
+      setChatFiles(prev => prev.filter(file => file.id !== fileId));
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setError('Недостаточно прав для удаления файла.');
+      } else {
+        setError('Не удалось удалить файл.');
+      }
+    } finally {
+      setFilesActionLoading(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -318,6 +387,56 @@ export const ChatPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-800">Файлы чата</h3>
+          <div>
+            <input
+              type="file"
+              ref={chatFileInputRef}
+              onChange={handleChatFilePick}
+              accept="image/jpeg,image/png,application/pdf"
+              className="hidden"
+            />
+            <button
+              onClick={() => chatFileInputRef.current?.click()}
+              disabled={filesActionLoading}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              Загрузить файл
+            </button>
+          </div>
+        </div>
+        {filesLoading ? (
+          <p className="text-sm text-gray-500">Загрузка файлов...</p>
+        ) : chatFiles.length === 0 ? (
+          <p className="text-sm text-gray-500">Файлы еще не загружены.</p>
+        ) : (
+          <div className="space-y-1 max-h-28 overflow-y-auto">
+            {chatFiles.map(file => (
+              <div key={file.id} className="flex items-center justify-between text-sm bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
+                <span className="truncate pr-3">{file.filename} ({Math.max(1, Math.round(file.size / 1024))} KB)</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleDownloadChatFile(file.id)}
+                    className="text-indigo-600 hover:text-indigo-700"
+                  >
+                    Скачать
+                  </button>
+                  <button
+                    onClick={() => handleDeleteChatFile(file.id)}
+                    disabled={filesActionLoading}
+                    className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {messages.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">

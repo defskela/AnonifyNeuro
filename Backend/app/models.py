@@ -62,6 +62,10 @@ class Chat(Base):
         "Message", back_populates="chat", order_by="Message.created_at",
         cascade="all, delete-orphan"
     )
+    files = relationship(
+        "ChatFile", back_populates="chat", order_by="ChatFile.created_at",
+        cascade="all, delete-orphan"
+    )
 
 
 class Message(Base):
@@ -76,6 +80,22 @@ class Message(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     chat = relationship("Chat", back_populates="messages")
+
+
+class ChatFile(Base):
+    __tablename__ = "chat_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    chat_id = Column(Integer, ForeignKey("chats.id"), index=True, nullable=False)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    object_key = Column(String, unique=True, nullable=False)
+    filename = Column(String, nullable=False)
+    content_type = Column(String, nullable=False)
+    size = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    chat = relationship("Chat", back_populates="files")
+    user = relationship("User")
 
 
 class RefreshToken(Base):

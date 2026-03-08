@@ -16,12 +16,18 @@ describe('chatsApi', () => {
 
   describe('listChats', () => {
     it('fetches chats list', async () => {
-      const mockData = [{ id: 1, title: 'Chat 1' }];
+      const mockData = {
+        items: [{ id: 1, title: 'Chat 1' }],
+        total: 1,
+        page: 1,
+        page_size: 10,
+        pages: 1,
+      };
       vi.mocked(client.get).mockResolvedValue({ data: mockData });
 
       const result = await chatsApi.listChats();
 
-      expect(client.get).toHaveBeenCalledWith('/chats');
+      expect(client.get).toHaveBeenCalledWith('/chats', { params: {} });
       expect(result).toEqual(mockData);
     });
   });
