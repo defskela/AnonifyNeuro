@@ -14,7 +14,6 @@ export interface RegisterCredentials {
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
-  jwt_token?: string;
   token_type?: string;
   message?: string;
 }

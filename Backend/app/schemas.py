@@ -30,8 +30,6 @@ class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    # Backward compatibility for existing clients/tests.
-    jwt_token: str
 
 
 class RefreshTokenRequest(BaseModel):

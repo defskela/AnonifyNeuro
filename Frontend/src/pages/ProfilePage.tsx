@@ -68,8 +68,6 @@ export const ProfilePage: React.FC = () => {
 
             if (response.access_token && response.refresh_token) {
                 session.setTokens(response.access_token, response.refresh_token);
-            } else if (response.jwt_token) {
-                session.setToken(response.jwt_token);
             }
 
             setSuccess('Profile updated successfully');

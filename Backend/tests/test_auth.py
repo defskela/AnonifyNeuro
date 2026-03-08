@@ -1,5 +1,5 @@
 def _extract_access_token(payload: dict) -> str:
-    return payload.get("access_token") or payload["jwt_token"]
+    return payload["access_token"]
 
 
 def _extract_refresh_token(payload: dict) -> str:
@@ -35,7 +35,7 @@ def test_register_success(test_app):
     assert data["message"] == "User created successfully"
     assert "access_token" in data
     assert "refresh_token" in data
-    assert "jwt_token" in data
+    assert "jwt_token" not in data
 
 
 def test_register_duplicate_username(test_app):
