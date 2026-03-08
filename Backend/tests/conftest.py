@@ -34,7 +34,13 @@ def _setup_test_db():
             email="other@example.com",
             hashed_password=pwd_context.hash("otherpass")
         )
-        db.add_all([test_user, other_user])
+        admin_user = models.User(
+            username="adminuser",
+            email="admin@example.com",
+            hashed_password=pwd_context.hash("adminpass"),
+            role="admin"
+        )
+        db.add_all([test_user, other_user, admin_user])
         db.flush()
 
         primary_chat = models.Chat(user_id=test_user.id, title="Onboarding")

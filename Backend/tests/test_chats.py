@@ -42,8 +42,8 @@ def test_get_chat_messages_not_found_for_other_user(test_app):
     response = test_app.get(
         f"/chats/{other_chat_id}/messages", headers=headers)
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Chat not found"
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Insufficient permissions"
 
 
 def test_create_chat_success(test_app):
@@ -105,5 +105,40 @@ def test_send_message_not_found_for_other_user(test_app):
         headers=headers
     )
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Chat not found"
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Insufficient permissions"
+
+
+def test_admin_can_read_other_user_chat_messages(test_app):
+    other_headers = _auth_headers(test_app, "otheruser", "otherpass")
+    create_chat_response = test_app.post(
+        "/chats",
+        json={"title": "Other user admin visibility chat"},
+        headers=other_headers
+    )
+    other_chat_id = create_chat_response.json()["id"]
+    post_message_response = test_app.post(
+        f"/chats/{other_chat_id}/messages",
+        json={"content": "Visible for admin"},
+        headers=other_headers
+    )
+    assert post_message_response.status_code == 201
+
+    admin_headers = _auth_headers(test_app, "adminuser", "adminpass")
+    response = test_app.get(f"/chats/{other_chat_id}/messages", headers=admin_headers)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload, list)
+    assert payload
+
+
+def test_admin_sees_all_chats(test_app):
+    admin_headers = _auth_headers(test_app, "adminuser", "adminpass")
+    response = test_app.get("/chats", headers=admin_headers)
+
+    assert response.status_code == 200
+    chats = response.json()
+    titles = {chat["title"] for chat in chats}
+    assert "Onboarding" in titles
+    assert "Private" in titles

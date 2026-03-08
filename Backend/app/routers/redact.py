@@ -70,7 +70,7 @@ async def redact_document(
     file: UploadFile = File(...),
     confidence_threshold: float = Form(0.5),
     return_image: bool = Form(True),
-    current_user: str = Depends(get_current_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
     if not file.content_type or not file.content_type.startswith("image/"):
@@ -81,7 +81,7 @@ async def redact_document(
     
     task = models.Task(
         id=task_id,
-        user_id=1,
+        user_id=current_user.id,
         status=models.TaskStatus.processing,
         details="Detecting license plates..."
     )
@@ -134,17 +134,23 @@ async def redact_document(
 
 
 @router.get("/entities")
-def get_entities(current_user: str = Depends(get_current_user)):
+def get_entities(current_user: models.User = Depends(get_current_user)):
     return {
         "entities": ["license_plate"]
     }
 
 
 @router.get("/logs/{task_id}")
-def get_task_log(task_id: str, current_user: str = Depends(get_current_user), db: Session = Depends(database.get_db)):
+def get_task_log(
+    task_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    if current_user.role != "admin" and task.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     return {
         "task_id": task_id,

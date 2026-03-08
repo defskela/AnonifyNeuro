@@ -90,6 +90,10 @@ describe('ChatPage', () => {
     const sendButton = buttons.find(b => b.classList.contains('bg-gradient-to-r'));
     fireEvent.click(sendButton!);
 
+    await waitFor(() => {
+      expect(chatsApi.getMessages).toHaveBeenCalled();
+    });
+
     expect(chatsApi.sendMessage).not.toHaveBeenCalled();
   });
 });

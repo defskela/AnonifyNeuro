@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
+import { session } from '../auth/session';
 import { Button } from '../components/ui/Button';
 import type { User } from '../types/auth';
 
@@ -26,6 +27,7 @@ export const ProfilePage: React.FC = () => {
         try {
             const userData = await authApi.getProfile();
             setUser(userData);
+            session.setRole(userData.role);
             setFormData(prev => ({ ...prev, username: userData.username }));
         } catch (err) {
             if (err)
