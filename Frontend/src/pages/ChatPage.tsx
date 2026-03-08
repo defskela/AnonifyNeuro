@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { chatsApi } from '../api/chats';
+import { getErrorStatus } from '../utils/httpError';
 import type { Message, ChatDetails, ChatFile } from '../types/chat';
 import { SeoMeta } from '../components/seo/SeoMeta';
 
@@ -139,8 +140,8 @@ export const ChatPage: React.FC = () => {
       const updated = await chatsApi.updateChat(Number(chatId), { title: editTitle.trim() });
       setChatDetails(updated);
       setIsEditing(false);
-    } catch (e: any) {
-      if (e?.response?.status === 403) {
+    } catch (e: unknown) {
+      if (getErrorStatus(e) === 403) {
         setError('Недостаточно прав для редактирования чата.');
       }
     }
@@ -156,8 +157,8 @@ export const ChatPage: React.FC = () => {
     try {
       await chatsApi.deleteChat(Number(chatId));
       navigate('/chats');
-    } catch (e: any) {
-      if (e?.response?.status === 403) {
+    } catch (e: unknown) {
+      if (getErrorStatus(e) === 403) {
         setError('Недостаточно прав для удаления чата.');
       }
     }
@@ -221,13 +222,15 @@ export const ChatPage: React.FC = () => {
               content: `Загрузите изображение для обработки`
             });
             setMessages(prev => [...prev, botMessage]);
-          } catch (e) { }
+          } catch {
+            // Ignore assistant fallback send errors in delayed flow.
+          }
         }, 500);
       }
       setContent('');
-    } catch (e) {
+    } catch (e: unknown) {
       setUploading(false);
-      const status = (e as any)?.response?.status;
+      const status = getErrorStatus(e);
       if (status === 403) {
         setError('Недостаточно прав для отправки сообщений в этот чат.');
       } else {
@@ -250,8 +253,8 @@ export const ChatPage: React.FC = () => {
     try {
       const uploaded = await chatsApi.uploadChatFile(Number(chatId), file);
       setChatFiles(prev => [uploaded, ...prev]);
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 403) {
         setError('Недостаточно прав для загрузки файлов.');
       } else {
         setError('Не удалось загрузить файл.');
@@ -267,8 +270,8 @@ export const ChatPage: React.FC = () => {
     try {
       const url = await chatsApi.getChatFileDownloadUrl(Number(chatId), fileId);
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 403) {
         setError('Недостаточно прав для скачивания файла.');
       } else {
         setError('Не удалось получить ссылку на скачивание.');
@@ -282,8 +285,8 @@ export const ChatPage: React.FC = () => {
     try {
       await chatsApi.deleteChatFile(Number(chatId), fileId);
       setChatFiles(prev => prev.filter(file => file.id !== fileId));
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 403) {
         setError('Недостаточно прав для удаления файла.');
       } else {
         setError('Не удалось удалить файл.');

@@ -5,6 +5,7 @@ import { session } from '../auth/session';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { SeoMeta } from '../components/seo/SeoMeta';
+import { getErrorDetail } from '../utils/httpError';
 
 const UserIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,8 +77,8 @@ export const RegisterPage: React.FC = () => {
       const profile = await authApi.getProfile();
       session.setRole(profile.role);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to register. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorDetail(err) || 'Failed to register. Please try again.');
     } finally {
       setIsLoading(false);
     }
